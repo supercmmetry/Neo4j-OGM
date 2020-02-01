@@ -21,6 +21,7 @@ func (c *QueryCradle) init() {
 }
 
 type QueryRuntime interface {
+	CheckForInjection(expStr string) bool
 	Compile(cradle *QueryCradle) (string, error)
 	Execute(query string, target interface{}) error
 }
@@ -79,7 +80,13 @@ func (q *QueryEngine) Sync() error {
 			if cradle.pdom == Where {
 				return lucyErr.QueryChainLogicCorrupted
 			}
-			cradle.Exps.Push(qr.Params.(string))
+			param := qr.Params.(string)
+
+			if q.Runtime.CheckForInjection(param) {
+				return lucyErr.QueryInjectionDetected
+			}
+
+			cradle.Exps.Push(param)
 			cradle.Ops.Push(cradle.dom)
 
 			cradle.deps[Where] = struct{}{}
@@ -96,7 +103,13 @@ func (q *QueryEngine) Sync() error {
 			if _, ok := cradle.deps[Where]; !ok {
 				return lucyErr.QueryDependencyNotSatisfied
 			}
-			cradle.Exps.Push(qr.Params.(string))
+			param := qr.Params.(string)
+
+			if q.Runtime.CheckForInjection(param) {
+				return lucyErr.QueryInjectionDetected
+			}
+
+			cradle.Exps.Push(param)
 			cradle.Ops.Push(cradle.dom)
 		}
 		case Or:
@@ -112,7 +125,14 @@ func (q *QueryEngine) Sync() error {
 				if _, ok := q.cradle.deps[Where]; !ok {
 					return lucyErr.QueryDependencyNotSatisfied
 				}
-				cradle.Exps.Push(qr.Params.(string))
+
+				param := qr.Params.(string)
+
+				if q.Runtime.CheckForInjection(param) {
+					return lucyErr.QueryInjectionDetected
+				}
+
+				cradle.Exps.Push(param)
 				cradle.Ops.Push(cradle.dom)
 			}
 		}

@@ -14,8 +14,8 @@ type Neo4jRuntime struct {
 }
 
 var (
-	Neo4jInjectionRegex = regexp.MustCompile("^(.*?)(?:(?:\"(?:.*)\")|(?:'(?:.*)'))(.*?)\\s*(?:" +
-		"(?:SET)|" +
+	InQuoteRegex = regexp.MustCompile("(?:(\"(?:.*?)\")|('(?:.*?)'))")
+	Neo4jInjectionRegex = regexp.MustCompile("\\s(?:SET)|" +
 		"(?:CREATE)|" +
 		"(?:UPDATE)|" +
 		"(?:MATCH)|" +
@@ -40,12 +40,12 @@ var (
 		"(?:USE)|" +
 		"(?:DROP)|" +
 		"(?:START)|" +
-		"(?:STOP)" +
-		")\\s(.*?)")
+		"(?:STOP)")
 )
 
 func (n *Neo4jRuntime) CheckForInjection(expStr string) bool {
-	if Neo4jInjectionRegex.MatchString(strings.ToUpper(expStr)) {
+	pcStr := InQuoteRegex.ReplaceAllString(strings.ToUpper(expStr), "")
+	if Neo4jInjectionRegex.MatchString(pcStr) {
 		return true
 	}
 	return false

@@ -16,7 +16,6 @@ func main() {
 	fmt.Println("lucy - devel")
 
 	t := time.Now()
-	
 
 	lucifer := lucy.Lucy{}
 	lucifer.AddRuntime(neo4j.NewNeo4jRuntime())
