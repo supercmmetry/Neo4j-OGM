@@ -3,8 +3,9 @@ package lucyErr
 import "errors"
 
 var (
-	EmptyQueryQueue             = errors.New("lucy: query queue is empty")
-	EndDomainChanged            = errors.New("lucy: end domain changed abruptly")
+	EmptyQueue                  = errors.New("lucy: queue is empty")
 	QueryDependencyNotSatisfied = errors.New("lucy: query dependency was not satisfied")
 	QueryChainLogicCorrupted    = errors.New("lucy: query chain logic was corrupted")
+	ExpressionExpected          = errors.New("lucy: Expression expected in parameter")
+	ExpressionNotRecognized     = errors.New("lucy: Expression not recognized")
 )

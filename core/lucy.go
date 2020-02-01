@@ -1,5 +1,11 @@
 package lucy
 
+import (
+	"fmt"
+	lucyErr "lucy/errors"
+	"reflect"
+)
+
 type Lucy struct {
 	Engine  Layer
 	db      *Database
@@ -18,13 +24,11 @@ func (l *Lucy) AddRuntime(rt QueryRuntime) {
 	l.runtime = rt
 }
 
-type Expr map[string]interface{}
+type Exp map[string]interface{}
 
 type Layer interface {
 	AttachTo(l *Database)
-	Start()
 	StartTransaction()
-	Stop()
 	Sync() error
 	AddRuntime(rt QueryRuntime)
 }
@@ -35,7 +39,7 @@ type KeyValuePair struct {
 }
 
 type Database struct {
-	Queue         QueryQueue
+	Queue         Queue
 	Error         error
 	layer         Layer
 	isTransaction bool
@@ -55,27 +59,34 @@ func (l *Database) SetLayer(layer Layer) {
 }
 
 func (l *Database) Find(param interface{}) *Database {
-	l.Where(Marshal(param))
-
 	if l.Error != nil {
 		return l
 	}
 
-	l.addQuery(Query{DomainType: SetTarget, Output: param})
-	l.layer.Start()
+	l.addQuery(Query{DomainType: SetTarget, Params: Marshal(param), Output: param})
 	l.Error = l.layer.Sync()
 
 	return l
 }
 
-func (l *Database) Where(expr Expr) *Database {
+func (l *Database) Where(I ...interface{}) *Database {
 	if l.Error != nil {
 		return l
 	}
 
-	l.addQuery(Query{DomainType: Where, Params: expr})
-	l.Error = l.layer.Sync()
+	if len(I) > 0 {
+		if reflect.TypeOf(I[0]) == reflect.TypeOf(Exp{}) {
+			Exp := I[0]
+			l.addQuery(Query{DomainType: Where, Params: Exp})
 
+		} else if reflect.TypeOf(I[0]) == reflect.TypeOf("") {
+			l.addQuery(Query{DomainType: WhereStr, Params: fmt.Sprintf(I[0].(string), I[1:])})
+		} else {
+			l.Error = lucyErr.ExpressionNotRecognized
+		}
+	} else {
+		l.Error = lucyErr.ExpressionExpected
+	}
 	return l
 }
 
@@ -85,30 +96,69 @@ func (l *Database) Create(params interface{}) *Database {
 	}
 
 	l.addQuery(Query{DomainType: Creation, Params: Marshal(params)})
-	l.layer.Start()
 	l.Error = l.layer.Sync()
 
 	return l
 }
 
-func (l *Database) And(expr Expr) *Database {
+func (l *Database) And(I ...interface{}) *Database {
 	if l.Error != nil {
 		return l
 	}
 
-	l.addQuery(Query{DomainType: And, Params: expr})
-	l.Error = l.layer.Sync()
+	if len(I) > 0 {
+		if reflect.TypeOf(I[0]) == reflect.TypeOf(Exp{}) {
+			Exp := I[0]
+			l.addQuery(Query{DomainType: And, Params: Exp})
+
+		} else if reflect.TypeOf(I[0]) == reflect.TypeOf("") {
+			l.addQuery(Query{DomainType: AndStr, Params: fmt.Sprintf(I[0].(string), I[1:])})
+		} else {
+			l.Error = lucyErr.ExpressionNotRecognized
+		}
+	} else {
+		l.Error = lucyErr.ExpressionExpected
+	}
+	return l
+}
+
+func (l *Database) Or(I ...interface{}) *Database {
+	if l.Error != nil {
+		return l
+	}
+
+	if len(I) > 0 {
+		if reflect.TypeOf(I[0]) == reflect.TypeOf(Exp{}) {
+			Exp := I[0]
+			l.addQuery(Query{DomainType: Or, Params: Exp})
+
+		} else if reflect.TypeOf(I[0]) == reflect.TypeOf("") {
+			l.addQuery(Query{DomainType: OrStr, Params: fmt.Sprintf(I[0].(string), I[1:])})
+		} else {
+			l.Error = lucyErr.ExpressionNotRecognized
+		}
+	} else {
+		l.Error = lucyErr.ExpressionExpected
+	}
+	return l
+}
+
+func (l *Database) By(name string) *Database {
+	if l.Error != nil {
+		return l
+	}
+
+	l.addQuery(Query{DomainType: MiscNodeName, Params: name})
 
 	return l
 }
 
-func (l *Database) Or(expr Expr) *Database {
+func (l *Database) Model(i interface{}) *Database {
 	if l.Error != nil {
 		return l
 	}
 
-	l.addQuery(Query{DomainType: Or, Params: expr})
-	l.Error = l.layer.Sync()
+	l.addQuery(Query{DomainType: Model, Params: Marshal(i)})
 
 	return l
 }

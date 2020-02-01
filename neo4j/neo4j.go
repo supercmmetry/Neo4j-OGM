@@ -1,7 +1,7 @@
 package neo4j
 
 import (
-	lucy "Neo4j-OGM/core"
+	lucy "lucy/core"
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 )
 

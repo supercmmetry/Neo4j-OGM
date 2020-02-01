@@ -1,9 +1,10 @@
 package main
 
 import (
-	lucy "Neo4j-OGM/core"
-	"Neo4j-OGM/neo4j"
 	"fmt"
+	lucy "lucy/core"
+	"lucy/neo4j"
+	"time"
 )
 
 type Person struct {
@@ -14,13 +15,19 @@ type Person struct {
 func main() {
 	fmt.Println("lucy - devel")
 
+	t := time.Now()
+	
+
 	lucifer := lucy.Lucy{}
 	lucifer.AddRuntime(neo4j.NewNeo4jRuntime())
 
 	peep := Person{}
 
 	tx := lucifer.DB().Begin()
-	err := tx.Where(lucy.Expr{"name":"Vishaal"}).And(lucy.Expr{"age": 19}).Find(&peep).Error
+	err := tx.Where(lucy.Exp{"name":"Vishaal"}).And("age=%d", 19).Find(&peep).Error
+
+
+	fmt.Println(time.Now().Sub(t))
 
 	if err != nil {
 		panic(err)

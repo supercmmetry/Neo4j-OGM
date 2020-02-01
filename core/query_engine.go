@@ -1,24 +1,23 @@
 package lucy
 
 import (
-	lucyErr "Neo4j-OGM/errors"
+	lucyErr "lucy/errors"
 )
 
 type QueryCradle struct {
-	exps      []Expr
-	ops       []string
+	exps      Queue
+	ops       Queue
 	dom, pdom DomainType
-	deps      map[string]struct{}
+	deps      map[DomainType]struct{}
 	out       interface{}
 }
 
 func (c *QueryCradle) init() {
 	c.dom = Unknown
 	c.pdom = Unknown
-	c.exps = make([]Expr, 0)
-	c.ops = make([]string, 0)
-	c.deps = make(map[string]struct{})
-
+	c.exps.Init()
+	c.ops.Init()
+	c.deps = make(map[DomainType]struct{})
 }
 
 type QueryRuntime interface {
@@ -27,7 +26,7 @@ type QueryRuntime interface {
 }
 
 type QueryEngine struct {
-	queue         *QueryQueue
+	queue         *Queue
 	hasStarted    bool
 	isTransaction bool
 	cradle        *QueryCradle
@@ -50,85 +49,97 @@ func (q *QueryEngine) AttachTo(l *Database) {
 	l.SetLayer(q)
 }
 
-func (q *QueryEngine) Start() {
-	if q.isTransaction {
-		return
-	}
-	q.hasStarted = true
-}
-
 func (q *QueryEngine) StartTransaction() {
 	q.isTransaction = true
 }
 
 func (q *QueryEngine) Sync() error {
-	if !q.hasStarted {
-		qr, err := q.queue.Get()
+	cradle := q.cradle
+	for !q.queue.IsEmpty() {
+		qri, err := q.queue.Get()
 		if err != nil {
 			return err
 		}
 
+		qr := qri.(Query)
+
+		cradle.dom = qr.DomainType
 		switch qr.DomainType {
 		case Where:
 			{
-				if q.cradle.pdom == Where {
+				if cradle.pdom == Where {
 					return lucyErr.QueryChainLogicCorrupted
 				}
-				q.cradle.exps = append(q.cradle.exps, qr.Params.(Expr))
-				q.cradle.deps["where"] = struct{}{}
+				cradle.exps.Push(qr.Params.(Exp))
+				cradle.ops.Push(Where)
+
+				cradle.deps[Where] = struct{}{}
 			}
+		case WhereStr: {
+			if cradle.pdom == Where {
+				return lucyErr.QueryChainLogicCorrupted
+			}
+			cradle.exps.Push(qr.Params.(string))
+			cradle.ops.Push(cradle.dom)
+
+			cradle.deps[Where] = struct{}{}
+		}
 		case And:
 			{
-				if _, ok := q.cradle.deps["where"]; !ok {
+				if _, ok := cradle.deps[Where]; !ok {
 					return lucyErr.QueryDependencyNotSatisfied
 				}
-				q.cradle.exps = append(q.cradle.exps, qr.Params.(Expr))
-				q.cradle.ops = append(q.cradle.ops, "and")
+				cradle.exps.Push(qr.Params.(Exp))
+				cradle.ops.Push(cradle.dom)
 			}
+		case AndStr:{
+			if _, ok := cradle.deps[Where]; !ok {
+				return lucyErr.QueryDependencyNotSatisfied
+			}
+			cradle.exps.Push(qr.Params.(string))
+			cradle.ops.Push(cradle.dom)
+		}
 		case Or:
 			{
-				if _, ok := q.cradle.deps["where"]; !ok {
+				if _, ok := q.cradle.deps[Where]; !ok {
 					return lucyErr.QueryDependencyNotSatisfied
 				}
-				q.cradle.exps = append(q.cradle.exps, qr.Params.(Expr))
-				q.cradle.ops = append(q.cradle.ops, "or")
+				cradle.exps.Push(qr.Params.(Exp))
+				cradle.ops.Push(cradle.dom)
 			}
-		}
-
-		q.cradle.pdom = q.cradle.dom
-		return nil
-	}
-
-	for !q.queue.IsEmpty() {
-		qr, err := q.queue.Get()
-		if err != nil {
-			return err
-		}
-
-		// Manage end-domain for the query engine.
-		if IsEndDomain(qr.DomainType) {
-			if q.cradle.dom != Unknown {
-				if q.cradle.dom != qr.DomainType {
-					return lucyErr.EndDomainChanged
+		case OrStr:{
+			{
+				if _, ok := q.cradle.deps[Where]; !ok {
+					return lucyErr.QueryDependencyNotSatisfied
 				}
-			} else {
-				q.cradle.dom = qr.DomainType
+				cradle.exps.Push(qr.Params.(string))
+				cradle.ops.Push(cradle.dom)
 			}
 		}
-
-		switch qr.DomainType {
 		case SetTarget:
 			{
-				q.cradle.out = qr.Output
-				// todo: Evaluate query with query-compiler.
+				/* If the 'Where' clause is used in conjunction with 'SetTarget (aka) Find' ,
+				   then ignore params passed by query, otherwise do not ignore.
+				 */
+
+				if _, ok := q.cradle.deps[Where]; ok {
+					cradle.ops.Push(SetTarget)
+				} else {
+					cradle.ops.Push(Where)
+					cradle.exps.Push(qr.Params.(Exp))
+					cradle.ops.Push(SetTarget)
+				}
+
+				cradle.out = qr.Output
 			}
+		case MiscNodeName: {
+			cradle.ops.Push(MiscNodeName)
+			cradle.exps.Push(qr.Params)
+		}
 		}
 
+		cradle.pdom = cradle.dom
 	}
 
 	return nil
-}
-
-func (q *QueryEngine) Stop() {
-	q.hasStarted = false
 }
