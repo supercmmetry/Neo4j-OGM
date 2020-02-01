@@ -38,6 +38,10 @@ func (q *Queue) Init() {
 	q.elements = &elements
 }
 
+func (q *Queue) GetAll() *[]interface{} {
+	return q.elements
+}
+
 func (q *Queue) Push(elem interface{}) {
 	*q.elements = append(*q.elements, elem)
 }

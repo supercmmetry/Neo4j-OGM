@@ -5,18 +5,18 @@ import (
 )
 
 type QueryCradle struct {
-	exps      Queue
-	ops       Queue
+	Exps      Queue
+	Ops       Queue
 	dom, pdom DomainType
 	deps      map[DomainType]struct{}
-	out       interface{}
+	Out       interface{}
 }
 
 func (c *QueryCradle) init() {
 	c.dom = Unknown
 	c.pdom = Unknown
-	c.exps.Init()
-	c.ops.Init()
+	c.Exps.Init()
+	c.Ops.Init()
 	c.deps = make(map[DomainType]struct{})
 }
 
@@ -70,8 +70,8 @@ func (q *QueryEngine) Sync() error {
 				if cradle.pdom == Where {
 					return lucyErr.QueryChainLogicCorrupted
 				}
-				cradle.exps.Push(qr.Params.(Exp))
-				cradle.ops.Push(Where)
+				cradle.Exps.Push(qr.Params.(Exp))
+				cradle.Ops.Push(Where)
 
 				cradle.deps[Where] = struct{}{}
 			}
@@ -79,8 +79,8 @@ func (q *QueryEngine) Sync() error {
 			if cradle.pdom == Where {
 				return lucyErr.QueryChainLogicCorrupted
 			}
-			cradle.exps.Push(qr.Params.(string))
-			cradle.ops.Push(cradle.dom)
+			cradle.Exps.Push(qr.Params.(string))
+			cradle.Ops.Push(cradle.dom)
 
 			cradle.deps[Where] = struct{}{}
 		}
@@ -89,52 +89,52 @@ func (q *QueryEngine) Sync() error {
 				if _, ok := cradle.deps[Where]; !ok {
 					return lucyErr.QueryDependencyNotSatisfied
 				}
-				cradle.exps.Push(qr.Params.(Exp))
-				cradle.ops.Push(cradle.dom)
+				cradle.Exps.Push(qr.Params.(Exp))
+				cradle.Ops.Push(cradle.dom)
 			}
 		case AndStr:{
 			if _, ok := cradle.deps[Where]; !ok {
 				return lucyErr.QueryDependencyNotSatisfied
 			}
-			cradle.exps.Push(qr.Params.(string))
-			cradle.ops.Push(cradle.dom)
+			cradle.Exps.Push(qr.Params.(string))
+			cradle.Ops.Push(cradle.dom)
 		}
 		case Or:
 			{
 				if _, ok := q.cradle.deps[Where]; !ok {
 					return lucyErr.QueryDependencyNotSatisfied
 				}
-				cradle.exps.Push(qr.Params.(Exp))
-				cradle.ops.Push(cradle.dom)
+				cradle.Exps.Push(qr.Params.(Exp))
+				cradle.Ops.Push(cradle.dom)
 			}
 		case OrStr:{
 			{
 				if _, ok := q.cradle.deps[Where]; !ok {
 					return lucyErr.QueryDependencyNotSatisfied
 				}
-				cradle.exps.Push(qr.Params.(string))
-				cradle.ops.Push(cradle.dom)
+				cradle.Exps.Push(qr.Params.(string))
+				cradle.Ops.Push(cradle.dom)
 			}
 		}
 		case SetTarget:
 			{
 				/* If the 'Where' clause is used in conjunction with 'SetTarget (aka) Find' ,
 				   then ignore params passed by query, otherwise do not ignore.
-				 */
+				*/
 
 				if _, ok := q.cradle.deps[Where]; ok {
-					cradle.ops.Push(SetTarget)
+					cradle.Ops.Push(SetTarget)
 				} else {
-					cradle.ops.Push(Where)
-					cradle.exps.Push(qr.Params.(Exp))
-					cradle.ops.Push(SetTarget)
+					cradle.Ops.Push(Where)
+					cradle.Exps.Push(qr.Params.(Exp))
+					cradle.Ops.Push(SetTarget)
 				}
 
-				cradle.out = qr.Output
+				cradle.Out = qr.Output
 			}
 		case MiscNodeName: {
-			cradle.ops.Push(MiscNodeName)
-			cradle.exps.Push(qr.Params)
+			cradle.Ops.Push(MiscNodeName)
+			cradle.Exps.Push(qr.Params)
 		}
 		}
 

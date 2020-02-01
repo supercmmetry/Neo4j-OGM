@@ -8,4 +8,5 @@ var (
 	QueryChainLogicCorrupted    = errors.New("lucy: query chain logic was corrupted")
 	ExpressionExpected          = errors.New("lucy: Expression expected in parameter")
 	ExpressionNotRecognized     = errors.New("lucy: Expression not recognized")
+	QueryInjectionDetected      = errors.New("lucy: query injection detected")
 )

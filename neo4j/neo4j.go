@@ -1,14 +1,54 @@
 package neo4j
 
 import (
-	lucy "lucy/core"
 	"github.com/neo4j/neo4j-go-driver/neo4j"
+	lucy "lucy/core"
+	"regexp"
+	"strings"
 )
 
 type Neo4jRuntime struct {
 	driver  neo4j.Driver
 	session neo4j.Session
 	result  neo4j.Result
+}
+
+var (
+	Neo4jInjectionRegex = regexp.MustCompile("^(.*?)(?:(?:\"(?:.*)\")|(?:'(?:.*)'))(.*?)\\s*(?:" +
+		"(?:SET)|" +
+		"(?:CREATE)|" +
+		"(?:UPDATE)|" +
+		"(?:MATCH)|" +
+		"(?:RETURN)|" +
+		"(?:WITH)|" +
+		"(?:UNWIND)|" +
+		"(?:WHERE)|" +
+		"(?:EXISTS)|" +
+		"(?:ORDER BY)|" +
+		"(?:SKIP)|" +
+		"(?:LIMIT)|" +
+		"(?:USING)|" +
+		"(?:DELETE)|" +
+		"(?:DETACH)|" +
+		"(?:REMOVE)|" +
+		"(?:FOR EACH)|" +
+		"(?:MERGE)|" +
+		"(?:ON CREATE)|" +
+		"(?:ON MATCH)|" +
+		"(?:CALL)|" +
+		"(?:YIELD)|" +
+		"(?:USE)|" +
+		"(?:DROP)|" +
+		"(?:START)|" +
+		"(?:STOP)" +
+		")\\s(.*?)")
+)
+
+func (n *Neo4jRuntime) CheckForInjection(expStr string) bool {
+	if Neo4jInjectionRegex.MatchString(strings.ToUpper(expStr)) {
+		return true
+	}
+	return false
 }
 
 func (n *Neo4jRuntime) Compile(cradle *lucy.QueryCradle) (string, error) {
@@ -22,8 +62,3 @@ func (n *Neo4jRuntime) Execute(query string, target interface{}) error {
 func NewNeo4jRuntime() lucy.QueryRuntime {
 	return &Neo4jRuntime{}
 }
-
-
-
-
-
