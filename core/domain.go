@@ -10,4 +10,6 @@ const (
 	Deletion  DomainType = 4
 	SetTarget DomainType = 6
 	Unknown   DomainType = 7
+	And       DomainType = 8
+	Or        DomainType = 9
 )

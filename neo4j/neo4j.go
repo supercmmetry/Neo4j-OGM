@@ -5,18 +5,25 @@ import (
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 )
 
-type Neo4J struct {
+type Neo4jRuntime struct {
 	driver  neo4j.Driver
 	session neo4j.Session
 	result  neo4j.Result
-	lucy    *lucy.Lucy
 }
 
-func (n *Neo4J) MapToLucy() {
-	n.lucy = &lucy.Lucy{Mapping:n}
+func (n *Neo4jRuntime) Compile(cradle *lucy.QueryCradle) (string, error) {
+	panic("implement me")
 }
 
-func (n *Neo4J) Find(param interface{}) error {
-	// todo: Implement using Neo4J.
-	return nil
+func (n *Neo4jRuntime) Execute(query string, target interface{}) error {
+	panic("implement me")
 }
+
+func NewNeo4jRuntime() lucy.QueryRuntime {
+	return &Neo4jRuntime{}
+}
+
+
+
+
+

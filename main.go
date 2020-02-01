@@ -14,16 +14,16 @@ type Person struct {
 func main() {
 	fmt.Println("lucy - devel")
 
-	lucifer := &lucy.Lucy{}
-	engine := (&neo4j.QueryEngine{}).NewQueryEngine()
-	engine.AttachTo(lucifer)
+	lucifer := lucy.Lucy{}
+	lucifer.AddRuntime(neo4j.NewNeo4jRuntime())
 
 	peep := Person{}
 
-	err := lucifer.Where(lucy.Expr{"name": "Vishaal", "age": 19}).Find(&peep).Error
+	tx := lucifer.DB().Begin()
+	err := tx.Where(lucy.Expr{"name":"Vishaal"}).And(lucy.Expr{"age": 19}).Find(&peep).Error
+
 	if err != nil {
 		panic(err)
 	}
-
 
 }
