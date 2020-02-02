@@ -23,7 +23,7 @@ func main() {
 	peep := Person{}
 
 	tx := lucifer.DB().Begin()
-	err := tx.Where(lucy.Exp{"name":"Vishaal"}).And("age=%d", 19).Find(&peep).Error
+	err := tx.Where(lucy.Exp{"name":"Vishaal"}).And("age=?", 19).Find(&peep).Error
 
 
 	fmt.Println(time.Now().Sub(t))

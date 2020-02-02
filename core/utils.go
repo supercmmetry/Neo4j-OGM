@@ -1,8 +1,10 @@
 package lucy
 
 import (
+	"fmt"
 	lucyErr "lucy/errors"
 	"reflect"
+	"strconv"
 )
 
 func Marshal(v interface{}) map[string]interface{} {
@@ -25,8 +27,68 @@ func Marshal(v interface{}) map[string]interface{} {
 	return tagMap
 }
 
-func IsEndDomain(d DomainType) bool {
-	return d == SetTarget || d == Creation || d == Deletion || d == Updation
+func Format(format string, I ...interface{}) string {
+	newStr := ""
+	index := 0
+	for _, chr := range format {
+		if chr == '?' {
+			index += 1
+			i := index - 1
+			switch reflect.TypeOf(I[i]).Kind() {
+			case reflect.String:
+				{
+					subStr := ""
+					targStr := I[i].(string)
+					for _, c := range targStr {
+						if c == '\'' || c == '"' {
+							subStr += "\\"
+						}
+						subStr += string(c)
+					}
+					newStr += "'" + subStr + "'"
+				}
+			case reflect.Int: {
+				newStr += strconv.Itoa(I[i].(int))
+			}
+			case reflect.Int64: {
+				newStr += strconv.FormatInt(I[i].(int64), 10)
+			}
+			case reflect.Int32: {
+				newStr += strconv.FormatInt(int64(I[i].(int32)), 10)
+			}
+			case reflect.Int16: {
+				newStr += strconv.FormatInt(int64(I[i].(int16)), 10)
+			}
+			case reflect.Int8: {
+				newStr += strconv.FormatInt(int64(I[i].(int8)), 10)
+			}
+			case reflect.Uint: {
+				newStr += strconv.FormatUint(uint64(I[i].(uint)), 10)
+			}
+			case reflect.Uint8: {
+				newStr += strconv.FormatUint(uint64(I[i].(uint8)), 10)
+			}
+			case reflect.Uint16: {
+				newStr += strconv.FormatUint(uint64(I[i].(uint16)), 10)
+			}
+			case reflect.Uint32: {
+				newStr += strconv.FormatUint(uint64(I[i].(uint32)), 10)
+			}
+			case reflect.Uint64: {
+				newStr += strconv.FormatUint(I[i].(uint64), 10)
+			}
+			case reflect.Float32: {
+				newStr += fmt.Sprintf("%f", I[i].(float32))
+			}
+			case reflect.Float64: {
+				newStr += fmt.Sprintf("%f", I[i].(float64))
+			}
+			}
+		} else {
+			newStr += string(chr)
+		}
+	}
+	return newStr
 }
 
 type Queue struct {

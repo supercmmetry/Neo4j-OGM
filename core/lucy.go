@@ -1,7 +1,6 @@
 package lucy
 
 import (
-	"fmt"
 	lucyErr "lucy/errors"
 	"reflect"
 )
@@ -69,24 +68,20 @@ func (l *Database) Find(param interface{}) *Database {
 	return l
 }
 
-func (l *Database) Where(I ...interface{}) *Database {
+func (l *Database) Where(I_ interface{}, I ...interface{}) *Database {
 	if l.Error != nil {
 		return l
 	}
 
-	if len(I) > 0 {
-		if reflect.TypeOf(I[0]) == reflect.TypeOf(Exp{}) {
-			Exp := I[0]
-			l.addQuery(Query{DomainType: Where, Params: Exp})
-
-		} else if reflect.TypeOf(I[0]) == reflect.TypeOf("") {
-			l.addQuery(Query{DomainType: WhereStr, Params: fmt.Sprintf(I[0].(string), I[1:])})
-		} else {
-			l.Error = lucyErr.ExpressionNotRecognized
-		}
+	if reflect.TypeOf(I_) == reflect.TypeOf(Exp{}) {
+		Exp := I_
+		l.addQuery(Query{DomainType: Where, Params: Exp})
+	} else if reflect.TypeOf(I_) == reflect.TypeOf("") {
+		l.addQuery(Query{DomainType: WhereStr, Params: Format(I_.(string), I)})
 	} else {
-		l.Error = lucyErr.ExpressionExpected
+		l.Error = lucyErr.ExpressionNotRecognized
 	}
+
 	return l
 }
 
@@ -101,45 +96,37 @@ func (l *Database) Create(params interface{}) *Database {
 	return l
 }
 
-func (l *Database) And(I ...interface{}) *Database {
+func (l *Database) And(I_ interface{}, I ...interface{}) *Database {
 	if l.Error != nil {
 		return l
 	}
 
-	if len(I) > 0 {
-		if reflect.TypeOf(I[0]) == reflect.TypeOf(Exp{}) {
-			Exp := I[0]
-			l.addQuery(Query{DomainType: And, Params: Exp})
-
-		} else if reflect.TypeOf(I[0]) == reflect.TypeOf("") {
-			l.addQuery(Query{DomainType: AndStr, Params: fmt.Sprintf(I[0].(string), I[1:])})
-		} else {
-			l.Error = lucyErr.ExpressionNotRecognized
-		}
+	if reflect.TypeOf(I_) == reflect.TypeOf(Exp{}) {
+		Exp := I_
+		l.addQuery(Query{DomainType: And, Params: Exp})
+	} else if reflect.TypeOf(I_) == reflect.TypeOf("") {
+		l.addQuery(Query{DomainType: AndStr, Params: Format(I_.(string), I)})
 	} else {
-		l.Error = lucyErr.ExpressionExpected
+		l.Error = lucyErr.ExpressionNotRecognized
 	}
+
 	return l
 }
 
-func (l *Database) Or(I ...interface{}) *Database {
+func (l *Database) Or(I_ interface{}, I ...interface{}) *Database {
 	if l.Error != nil {
 		return l
 	}
 
-	if len(I) > 0 {
-		if reflect.TypeOf(I[0]) == reflect.TypeOf(Exp{}) {
-			Exp := I[0]
-			l.addQuery(Query{DomainType: Or, Params: Exp})
-
-		} else if reflect.TypeOf(I[0]) == reflect.TypeOf("") {
-			l.addQuery(Query{DomainType: OrStr, Params: fmt.Sprintf(I[0].(string), I[1:])})
-		} else {
-			l.Error = lucyErr.ExpressionNotRecognized
-		}
+	if reflect.TypeOf(I_) == reflect.TypeOf(Exp{}) {
+		Exp := I_
+		l.addQuery(Query{DomainType: Or, Params: Exp})
+	} else if reflect.TypeOf(I_) == reflect.TypeOf("") {
+		l.addQuery(Query{DomainType: OrStr, Params: Format(I_.(string), I)})
 	} else {
-		l.Error = lucyErr.ExpressionExpected
+		l.Error = lucyErr.ExpressionNotRecognized
 	}
+
 	return l
 }
 
