@@ -15,38 +15,21 @@ type Neo4jRuntime struct {
 
 var (
 	InQuoteRegex = regexp.MustCompile("(?:(\"(?:.*?)\")|('(?:.*?)'))")
-	Neo4jInjectionRegex = regexp.MustCompile("\\s(?:SET)|" +
-		"(?:CREATE)|" +
-		"(?:UPDATE)|" +
-		"(?:MATCH)|" +
-		"(?:RETURN)|" +
-		"(?:WITH)|" +
-		"(?:UNWIND)|" +
-		"(?:WHERE)|" +
-		"(?:EXISTS)|" +
-		"(?:ORDER BY)|" +
-		"(?:SKIP)|" +
-		"(?:LIMIT)|" +
-		"(?:USING)|" +
-		"(?:DELETE)|" +
-		"(?:DETACH)|" +
-		"(?:REMOVE)|" +
-		"(?:FOR EACH)|" +
-		"(?:MERGE)|" +
-		"(?:ON CREATE)|" +
-		"(?:ON MATCH)|" +
-		"(?:CALL)|" +
-		"(?:YIELD)|" +
-		"(?:USE)|" +
-		"(?:DROP)|" +
-		"(?:START)|" +
-		"(?:STOP)")
+	CypherClauses = []string{"CREATE", "UPDATE", "MATCH", "RETURN", "WITH", "UNWIND", "WHERE", "EXISTS", "ORDER", "BY",
+		"SKIP", "LIMIT", "USING", "DELETE", "DETACH", "REMOVE", "FOR", "EACH", "MERGE", "ON", "CALL", "YIELD", "USE",
+	"DROP", "START", "STOP", "SET"}
 )
 
 func (n *Neo4jRuntime) CheckForInjection(expStr string) bool {
 	pcStr := InQuoteRegex.ReplaceAllString(strings.ToUpper(expStr), "")
-	if Neo4jInjectionRegex.MatchString(pcStr) {
-		return true
+	splStr := strings.Split(pcStr, " ")
+
+	for _, clause := range CypherClauses {
+		for _, substr := range splStr {
+			if substr == clause {
+				return true
+			}
+		}
 	}
 	return false
 }

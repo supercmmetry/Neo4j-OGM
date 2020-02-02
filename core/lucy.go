@@ -41,7 +41,6 @@ type Database struct {
 	Queue         Queue
 	Error         error
 	layer         Layer
-	isTransaction bool
 }
 
 func (l *Database) addQuery(query Query) {

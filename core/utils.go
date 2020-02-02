@@ -47,42 +47,54 @@ func Format(format string, I ...interface{}) string {
 					}
 					newStr += "'" + subStr + "'"
 				}
-			case reflect.Int: {
-				newStr += strconv.Itoa(I[i].(int))
-			}
-			case reflect.Int64: {
-				newStr += strconv.FormatInt(I[i].(int64), 10)
-			}
-			case reflect.Int32: {
-				newStr += strconv.FormatInt(int64(I[i].(int32)), 10)
-			}
-			case reflect.Int16: {
-				newStr += strconv.FormatInt(int64(I[i].(int16)), 10)
-			}
-			case reflect.Int8: {
-				newStr += strconv.FormatInt(int64(I[i].(int8)), 10)
-			}
-			case reflect.Uint: {
-				newStr += strconv.FormatUint(uint64(I[i].(uint)), 10)
-			}
-			case reflect.Uint8: {
-				newStr += strconv.FormatUint(uint64(I[i].(uint8)), 10)
-			}
-			case reflect.Uint16: {
-				newStr += strconv.FormatUint(uint64(I[i].(uint16)), 10)
-			}
-			case reflect.Uint32: {
-				newStr += strconv.FormatUint(uint64(I[i].(uint32)), 10)
-			}
-			case reflect.Uint64: {
-				newStr += strconv.FormatUint(I[i].(uint64), 10)
-			}
-			case reflect.Float32: {
-				newStr += fmt.Sprintf("%f", I[i].(float32))
-			}
-			case reflect.Float64: {
-				newStr += fmt.Sprintf("%f", I[i].(float64))
-			}
+			case reflect.Int:
+				{
+					newStr += strconv.Itoa(I[i].(int))
+				}
+			case reflect.Int64:
+				{
+					newStr += strconv.FormatInt(I[i].(int64), 10)
+				}
+			case reflect.Int32:
+				{
+					newStr += strconv.FormatInt(int64(I[i].(int32)), 10)
+				}
+			case reflect.Int16:
+				{
+					newStr += strconv.FormatInt(int64(I[i].(int16)), 10)
+				}
+			case reflect.Int8:
+				{
+					newStr += strconv.FormatInt(int64(I[i].(int8)), 10)
+				}
+			case reflect.Uint:
+				{
+					newStr += strconv.FormatUint(uint64(I[i].(uint)), 10)
+				}
+			case reflect.Uint8:
+				{
+					newStr += strconv.FormatUint(uint64(I[i].(uint8)), 10)
+				}
+			case reflect.Uint16:
+				{
+					newStr += strconv.FormatUint(uint64(I[i].(uint16)), 10)
+				}
+			case reflect.Uint32:
+				{
+					newStr += strconv.FormatUint(uint64(I[i].(uint32)), 10)
+				}
+			case reflect.Uint64:
+				{
+					newStr += strconv.FormatUint(I[i].(uint64), 10)
+				}
+			case reflect.Float32:
+				{
+					newStr += fmt.Sprintf("%f", I[i].(float32))
+				}
+			case reflect.Float64:
+				{
+					newStr += fmt.Sprintf("%f", I[i].(float64))
+				}
 			}
 		} else {
 			newStr += string(chr)
@@ -108,9 +120,21 @@ func (q *Queue) Push(elem interface{}) {
 	*q.elements = append(*q.elements, elem)
 }
 
+func (q *Queue) Pop() (interface{}, error) {
+	if (len(*q.elements)) == 0 {
+		return nil, lucyErr.EmptyQueue
+	}
+	elems := q.elements
+
+	lastElem := (*elems)[len(*elems)-1]
+	*elems = (*elems)[:len(*elems)-1]
+
+	return lastElem, nil
+}
+
 func (q *Queue) Get() (interface{}, error) {
 	if (len(*q.elements)) == 0 {
-		return Unknown, lucyErr.EmptyQueue
+		return nil, lucyErr.EmptyQueue
 	}
 	elem := (*q.elements)[0]
 	*q.elements = (*q.elements)[1:]

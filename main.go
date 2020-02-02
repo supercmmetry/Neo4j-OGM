@@ -18,11 +18,12 @@ func main() {
 	t := time.Now()
 
 	lucifer := lucy.Lucy{}
+
 	lucifer.AddRuntime(neo4j.NewNeo4jRuntime())
 
 	peep := Person{}
 
-	tx := lucifer.DB().Begin()
+	tx := lucifer.DB()
 	err := tx.Where(lucy.Exp{"name":"Vishaal"}).And("age=?", 19).Find(&peep).Error
 
 
