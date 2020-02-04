@@ -1,7 +1,7 @@
 package lucy
 
 import (
-	lucyErr "lucy/errors"
+	lucyErr "github.com/supercmmetry/lucy/errors"
 )
 
 type QueryCradle struct {

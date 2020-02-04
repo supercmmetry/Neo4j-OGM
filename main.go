@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	lucy "lucy/core"
-	"lucy/dialects"
+	lucy "github.com/supercmmetry/lucy/core"
+	"github.com/supercmmetry/lucy/dialects"
 	"time"
 )
 
