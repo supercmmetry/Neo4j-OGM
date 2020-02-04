@@ -71,7 +71,16 @@ func (q *QueryEngine) Sync() error {
 				if cradle.pdom == Where {
 					return lucyErr.QueryChainLogicCorrupted
 				}
-				cradle.Exps.Push(qr.Params.(Exp))
+				exp := qr.Params.(Exp)
+				for k,v := range exp {
+					exp[k] = Format("?", v) // Sanitize values
+
+					// Detect injection in keys
+					if q.Runtime.CheckForInjection(k) {
+						return lucyErr.QueryInjectionDetected
+					}
+				}
+				cradle.Exps.Push(exp)
 				cradle.Ops.Push(Where)
 
 				cradle.deps[Where] = struct{}{}
@@ -96,7 +105,16 @@ func (q *QueryEngine) Sync() error {
 				if _, ok := cradle.deps[Where]; !ok {
 					return lucyErr.QueryDependencyNotSatisfied
 				}
-				cradle.Exps.Push(qr.Params.(Exp))
+				exp := qr.Params.(Exp)
+				for k,v := range exp {
+					exp[k] = Format("?", v) // Sanitize values
+
+					// Detect injection in keys
+					if q.Runtime.CheckForInjection(k) {
+						return lucyErr.QueryInjectionDetected
+					}
+				}
+				cradle.Exps.Push(exp)
 				cradle.Ops.Push(cradle.dom)
 			}
 		case AndStr:{
@@ -117,7 +135,16 @@ func (q *QueryEngine) Sync() error {
 				if _, ok := q.cradle.deps[Where]; !ok {
 					return lucyErr.QueryDependencyNotSatisfied
 				}
-				cradle.Exps.Push(qr.Params.(Exp))
+				exp := qr.Params.(Exp)
+				for k,v := range exp {
+					exp[k] = Format("?", v) // Sanitize values
+
+					// Detect injection in keys
+					if q.Runtime.CheckForInjection(k) {
+						return lucyErr.QueryInjectionDetected
+					}
+				}
+				cradle.Exps.Push(exp)
 				cradle.Ops.Push(cradle.dom)
 			}
 		case OrStr:{

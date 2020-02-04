@@ -1,4 +1,4 @@
-package neo4j
+package dialects
 
 import (
 	"github.com/neo4j/neo4j-go-driver/neo4j"

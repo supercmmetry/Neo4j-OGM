@@ -34,13 +34,14 @@ func Format(format string, I ...interface{}) string {
 		if chr == '?' {
 			index += 1
 			i := index - 1
+
 			switch reflect.TypeOf(I[i]).Kind() {
 			case reflect.String:
 				{
 					subStr := ""
 					targStr := I[i].(string)
 					for _, c := range targStr {
-						if c == '\'' || c == '"' {
+						if c == '\'' || c == '"' || c == '\\' {
 							subStr += "\\"
 						}
 						subStr += string(c)
@@ -95,6 +96,13 @@ func Format(format string, I ...interface{}) string {
 				{
 					newStr += fmt.Sprintf("%f", I[i].(float64))
 				}
+			case reflect.Bool: {
+				if I[i].(bool) {
+					newStr += "true"
+				} else {
+					newStr += "false"
+				}
+			}
 			}
 		} else {
 			newStr += string(chr)
