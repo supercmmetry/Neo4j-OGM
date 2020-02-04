@@ -20,6 +20,7 @@ var (
 	"DROP", "START", "STOP", "SET"}
 )
 
+// CheckForInjection Checks whether the expression string contains cypher query injection
 func (n *Neo4jRuntime) CheckForInjection(expStr string) bool {
 	pcStr := InQuoteRegex.ReplaceAllString(strings.ToUpper(expStr), "")
 	splStr := strings.Split(pcStr, " ")
