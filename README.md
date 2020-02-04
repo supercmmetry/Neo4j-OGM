@@ -1,46 +1,38 @@
 <p align="center">
 	<img src="https://user-images.githubusercontent.com/30529572/72455010-fb38d400-37e7-11ea-9c1e-8cdeb5f5906e.png" />
-	<h2 align="center"> < Insert Project Title Here > </h2>
-	<h4 align="center"> < Insert Project Description Here > <h4>
+	<h2 align="center">lucy</h2>
+	<h4 align="center">An easy to use OGM for Neo4j<h4>
 </p>
 
 ---
-[![DOCS](https://img.shields.io/badge/Documentation-see%20docs-green?style=flat-square&logo=appveyor)](INSERT_LINK_FOR_DOCS_HERE) 
-  [![UI ](https://img.shields.io/badge/User%20Interface-Link%20to%20UI-orange?style=flat-square&logo=appveyor)](INSERT_UI_LINK_HERE)
+[![DOCS](https://img.shields.io/badge/Documentation-see%20docs-green?style=flat-square&logo=appveyor)](INSERT_LINK_FOR_DOCS_HERE)
 
 
 ## Functionalities
-- [ ]  < insert functionality >
-- [ ]  < insert functionality >
-- [ ]  < insert functionality >
-- [ ]  < insert functionality >
+- [ ]  Provide a rich API for interacting with a Neo4j database
+- [ ]  Catch potential injections
+- [ ]  Sanitize input
+- [ ]  Similar to GORM's syntax
 
 <br>
-
 
 ## Instructions to run
 
 * Pre-requisites:
-	-  < insert pre-requisite >
-	-  < insert pre-requisite >
+	-  [Go](https://golang.org/doc/install) version 1.11 or above
+	-  [Seabolt](https://github.com/neo4j-drivers/seabolt)
 
-* < directions to install > 
+* Installation directions
 ```bash
-< insert code >
-```
-
-* < directions to execute >
-
-```bash
-< insert code >
+go get -u github.com/supercmmetry/lucy
 ```
 
 <br>
 
 ## Contributors
 
-* [ < INSERT NAME HERE > ](INSERT_PROFILE_URL_HERE)
-* [ < INSERT NAME HERE > ](INSERT_PROFILE_URL_HERE)
+* [@supercmmetry](https://github.com/supercmmetry)
+* [@ATechnoHazard](https://github.com/ATechnoHazard)
 
 
 
