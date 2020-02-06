@@ -2,7 +2,7 @@ package lucy
 
 import (
 	"fmt"
-	lucyErr "lucy/errors"
+	e "lucy/errors"
 	"reflect"
 	"strconv"
 )
@@ -130,7 +130,7 @@ func (q *Queue) Push(elem interface{}) {
 
 func (q *Queue) Pop() (interface{}, error) {
 	if (len(*q.elements)) == 0 {
-		return nil, lucyErr.EmptyQueue
+		return nil, e.Error(e.EmptyQueue)
 	}
 	elems := q.elements
 
@@ -142,7 +142,7 @@ func (q *Queue) Pop() (interface{}, error) {
 
 func (q *Queue) Get() (interface{}, error) {
 	if (len(*q.elements)) == 0 {
-		return nil, lucyErr.EmptyQueue
+		return nil, e.Error(e.EmptyQueue)
 	}
 	elem := (*q.elements)[0]
 	*q.elements = (*q.elements)[1:]

@@ -1,8 +1,9 @@
 package lucy
 
 import (
-	lucyErr "lucy/errors"
+	e "lucy/errors"
 )
+
 
 type QueryCradle struct {
 	Exps      Queue
@@ -21,7 +22,7 @@ func (c *QueryCradle) init() {
 }
 
 type QueryRuntime interface {
-	CheckForInjection(expStr string) bool
+	CheckForInjection(expStr string) (uint, bool)
 	Compile(cradle *QueryCradle) (string, error)
 	Execute(query string, target interface{}) error
 }
@@ -69,15 +70,15 @@ func (q *QueryEngine) Sync() error {
 		case Where:
 			{
 				if cradle.pdom == Where {
-					return lucyErr.QueryChainLogicCorrupted
+					return e.Error(e.CorruptedQueryChain)
 				}
 				exp := qr.Params.(Exp)
 				for k,v := range exp {
 					exp[k] = Format("?", v) // Sanitize values
 
 					// Detect injection in keys
-					if q.Runtime.CheckForInjection(k) {
-						return lucyErr.QueryInjectionDetected
+					if s, ok := q.Runtime.CheckForInjection(k); ok {
+						return e.Error(e.QueryInjection, e.Severity(s))
 					}
 				}
 				cradle.Exps.Push(exp)
@@ -87,12 +88,12 @@ func (q *QueryEngine) Sync() error {
 			}
 		case WhereStr: {
 			if cradle.pdom == Where {
-				return lucyErr.QueryChainLogicCorrupted
+				return e.Error(e.CorruptedQueryChain)
 			}
 			param := qr.Params.(string)
 
-			if q.Runtime.CheckForInjection(param) {
-				return lucyErr.QueryInjectionDetected
+			if s, ok := q.Runtime.CheckForInjection(param); ok {
+				return e.Error(e.QueryInjection, e.Severity(s))
 			}
 
 			cradle.Exps.Push(param)
@@ -103,15 +104,15 @@ func (q *QueryEngine) Sync() error {
 		case And:
 			{
 				if _, ok := cradle.deps[Where]; !ok {
-					return lucyErr.QueryDependencyNotSatisfied
+					return e.Error(e.UnsatisfiedDependency)
 				}
 				exp := qr.Params.(Exp)
 				for k,v := range exp {
 					exp[k] = Format("?", v) // Sanitize values
 
 					// Detect injection in keys
-					if q.Runtime.CheckForInjection(k) {
-						return lucyErr.QueryInjectionDetected
+					if s, ok := q.Runtime.CheckForInjection(k); ok {
+						return e.Error(e.QueryInjection, e.Severity(s))
 					}
 				}
 				cradle.Exps.Push(exp)
@@ -119,12 +120,12 @@ func (q *QueryEngine) Sync() error {
 			}
 		case AndStr:{
 			if _, ok := cradle.deps[Where]; !ok {
-				return lucyErr.QueryDependencyNotSatisfied
+				return e.Error(e.UnsatisfiedDependency)
 			}
 			param := qr.Params.(string)
 
-			if q.Runtime.CheckForInjection(param) {
-				return lucyErr.QueryInjectionDetected
+			if s, ok := q.Runtime.CheckForInjection(param); ok {
+				return e.Error(e.QueryInjection, e.Severity(s))
 			}
 
 			cradle.Exps.Push(param)
@@ -133,15 +134,15 @@ func (q *QueryEngine) Sync() error {
 		case Or:
 			{
 				if _, ok := q.cradle.deps[Where]; !ok {
-					return lucyErr.QueryDependencyNotSatisfied
+					return e.Error(e.UnsatisfiedDependency)
 				}
 				exp := qr.Params.(Exp)
 				for k,v := range exp {
 					exp[k] = Format("?", v) // Sanitize values
 
 					// Detect injection in keys
-					if q.Runtime.CheckForInjection(k) {
-						return lucyErr.QueryInjectionDetected
+					if s, ok := q.Runtime.CheckForInjection(k); ok {
+						return e.Error(e.QueryInjection, e.Severity(s))
 					}
 				}
 				cradle.Exps.Push(exp)
@@ -150,13 +151,13 @@ func (q *QueryEngine) Sync() error {
 		case OrStr:{
 			{
 				if _, ok := q.cradle.deps[Where]; !ok {
-					return lucyErr.QueryDependencyNotSatisfied
+					return e.Error(e.UnsatisfiedDependency)
 				}
 
 				param := qr.Params.(string)
 
-				if q.Runtime.CheckForInjection(param) {
-					return lucyErr.QueryInjectionDetected
+				if s, ok := q.Runtime.CheckForInjection(param); ok {
+					return e.Error(e.QueryInjection, e.Severity(s))
 				}
 
 				cradle.Exps.Push(param)

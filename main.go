@@ -16,6 +16,7 @@ type Person struct {
 func main() {
 	fmt.Println("lucy - devel")
 
+
 	t := time.Now()
 
 	lucifer := lucy.Lucy{}

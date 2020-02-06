@@ -1,7 +1,7 @@
 package lucy
 
 import (
-	lucyErr "lucy/errors"
+	e "lucy/errors"
 	"reflect"
 )
 
@@ -78,7 +78,7 @@ func (l *Database) Where(I_ interface{}, I ...interface{}) *Database {
 	} else if reflect.TypeOf(I_) == reflect.TypeOf("") {
 		l.addQuery(Query{DomainType: WhereStr, Params: Format(I_.(string), I)})
 	} else {
-		l.Error = lucyErr.ExpressionNotRecognized
+		l.Error = e.Error(e.UnrecognizedExpression)
 	}
 
 	return l
@@ -106,7 +106,7 @@ func (l *Database) And(I_ interface{}, I ...interface{}) *Database {
 	} else if reflect.TypeOf(I_) == reflect.TypeOf("") {
 		l.addQuery(Query{DomainType: AndStr, Params: Format(I_.(string), I)})
 	} else {
-		l.Error = lucyErr.ExpressionNotRecognized
+		l.Error = e.Error(e.UnrecognizedExpression)
 	}
 
 	return l
@@ -123,7 +123,7 @@ func (l *Database) Or(I_ interface{}, I ...interface{}) *Database {
 	} else if reflect.TypeOf(I_) == reflect.TypeOf("") {
 		l.addQuery(Query{DomainType: OrStr, Params: Format(I_.(string), I)})
 	} else {
-		l.Error = lucyErr.ExpressionNotRecognized
+		l.Error = e.Error(e.UnrecognizedExpression)
 	}
 
 	return l

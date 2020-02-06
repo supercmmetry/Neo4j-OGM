@@ -1,12 +1,82 @@
 package lucyErr
 
-import "errors"
+const (
+	EmptyQueue             = iota
+	UnsatisfiedDependency  = iota
+	CorruptedQueryChain    = iota
+	ExpressionExpected     = iota
+	UnrecognizedExpression = iota
+	QueryInjection         = iota
+)
+
+const (
+	NoSeverity     = iota
+	LowSeverity    = iota
+	HighSeverity   = iota
+)
 
 var (
-	EmptyQueue                  = errors.New("lucy: queue is empty")
-	QueryDependencyNotSatisfied = errors.New("lucy: query dependency was not satisfied")
-	QueryChainLogicCorrupted    = errors.New("lucy: query chain logic was corrupted")
-	ExpressionExpected          = errors.New("lucy: Expression expected in parameter")
-	ExpressionNotRecognized     = errors.New("lucy: Expression not recognized")
-	QueryInjectionDetected      = errors.New("lucy: query injection detected")
+	lucyErrors        = (&LucyErrors{}).Init()
+	injectionSeverity = (&InjectionSeverity{}).Init()
 )
+
+type LucyErrors struct {
+	Code     uint
+	Data     string
+	errorMap map[uint]string
+}
+
+func (e *LucyErrors) Init() *LucyErrors {
+	e.Data = ""
+	e.errorMap = map[uint]string{
+		EmptyQueue:             "lucy: queue is empty",
+		UnsatisfiedDependency:  "lucy: query dependency was not satisfied",
+		CorruptedQueryChain:    "lucy: query chain logic was corrupted",
+		ExpressionExpected:     "lucy: expression expected in parameter",
+		UnrecognizedExpression: "lucy: expression not recognized",
+		QueryInjection:         "lucy: query injection detected",
+	}
+	return e
+}
+
+func (e *LucyErrors) Error() string {
+	errStr := e.errorMap[e.Code]
+	if len(e.Data) > 0 {
+		return errStr + " " + e.Data
+	}
+	return errStr
+}
+
+func Error(code uint, data ...string) error {
+	joinData := ""
+
+	for _, sub := range data {
+		joinData += sub
+	}
+	lucyErrors.Code = code
+	lucyErrors.Data = joinData
+	return lucyErrors
+}
+
+type InjectionSeverity struct {
+	Code   uint
+	sevMap map[uint]string
+}
+
+func (s *InjectionSeverity) Init() *InjectionSeverity {
+	s.sevMap = map[uint]string{
+		HighSeverity:   "(severity high)",
+		LowSeverity:    "(severity low)",
+		NoSeverity:     "",
+	}
+	return s
+}
+
+func (s *InjectionSeverity) Severity() string {
+	return s.sevMap[s.Code]
+}
+
+func Severity(code uint) string {
+	injectionSeverity.Code = code
+	return injectionSeverity.Severity()
+}
