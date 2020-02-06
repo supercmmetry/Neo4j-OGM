@@ -19,6 +19,7 @@ func (l *Lucy) DB() *Database {
 	return l.db
 }
 
+
 func (l *Lucy) AddRuntime(rt QueryRuntime) {
 	l.runtime = rt
 }
@@ -30,6 +31,7 @@ type Layer interface {
 	StartTransaction()
 	Sync() error
 	AddRuntime(rt QueryRuntime)
+	ToggleInjectionCheck()
 }
 
 type KeyValuePair struct {
@@ -54,6 +56,10 @@ func (l *Database) AddRuntime(rt QueryRuntime) {
 func (l *Database) SetLayer(layer Layer) {
 	l.layer = layer
 	l.Queue.Init()
+}
+
+func (l *Database) ToggleInjectionCheck() {
+	l.layer.ToggleInjectionCheck()
 }
 
 func (l *Database) Find(param interface{}) *Database {

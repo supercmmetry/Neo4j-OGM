@@ -65,8 +65,8 @@ type InjectionSeverity struct {
 
 func (s *InjectionSeverity) Init() *InjectionSeverity {
 	s.sevMap = map[uint]string{
-		HighSeverity: "(severity high)",
-		LowSeverity:  "(severity low)",
+		HighSeverity: "(severity: high)",
+		LowSeverity:  "(severity: low)",
 		NoSeverity:   "",
 	}
 	return s

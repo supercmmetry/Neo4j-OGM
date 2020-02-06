@@ -27,11 +27,16 @@ type QueryRuntime interface {
 }
 
 type QueryEngine struct {
-	queue         *Queue
-	hasStarted    bool
-	isTransaction bool
-	cradle        *QueryCradle
-	Runtime       QueryRuntime
+	queue             *Queue
+	hasStarted        bool
+	isTransaction     bool
+	checkForInjection bool
+	cradle            *QueryCradle
+	Runtime           QueryRuntime
+}
+
+func (q *QueryEngine) ToggleInjectionCheck() {
+	q.checkForInjection = !q.checkForInjection
 }
 
 func (q *QueryEngine) AddRuntime(rt QueryRuntime) {
@@ -39,6 +44,7 @@ func (q *QueryEngine) AddRuntime(rt QueryRuntime) {
 }
 
 func (q *QueryEngine) NewQueryEngine() Layer {
+	q.checkForInjection = true
 	q.cradle = &QueryCradle{}
 	q.cradle.init()
 	q.isTransaction = false
@@ -76,9 +82,12 @@ func (q *QueryEngine) Sync() error {
 					exp[k] = Format("?", v) // Sanitize values
 
 					// Detect injection in keys
-					if s, ok := q.Runtime.CheckForInjection(k); ok {
-						return e.Error(e.QueryInjection, e.Severity(s))
+					if q.checkForInjection {
+						if s, ok := q.Runtime.CheckForInjection(k); ok {
+							return e.Error(e.QueryInjection, e.Severity(s))
+						}
 					}
+
 				}
 				cradle.Exps.Push(exp)
 				cradle.Ops.Push(Where)
@@ -92,8 +101,10 @@ func (q *QueryEngine) Sync() error {
 				}
 				param := qr.Params.(string)
 
-				if s, ok := q.Runtime.CheckForInjection(param); ok {
-					return e.Error(e.QueryInjection, e.Severity(s))
+				if q.checkForInjection {
+					if s, ok := q.Runtime.CheckForInjection(param); ok {
+						return e.Error(e.QueryInjection, e.Severity(s))
+					}
 				}
 
 				cradle.Exps.Push(param)
@@ -111,10 +122,13 @@ func (q *QueryEngine) Sync() error {
 					exp[k] = Format("?", v) // Sanitize values
 
 					// Detect injection in keys
-					if s, ok := q.Runtime.CheckForInjection(k); ok {
-						return e.Error(e.QueryInjection, e.Severity(s))
+					if q.checkForInjection {
+						if s, ok := q.Runtime.CheckForInjection(k); ok {
+							return e.Error(e.QueryInjection, e.Severity(s))
+						}
 					}
 				}
+
 				cradle.Exps.Push(exp)
 				cradle.Ops.Push(cradle.family)
 			}
@@ -125,8 +139,10 @@ func (q *QueryEngine) Sync() error {
 				}
 				param := qr.Params.(string)
 
-				if s, ok := q.Runtime.CheckForInjection(param); ok {
-					return e.Error(e.QueryInjection, e.Severity(s))
+				if q.checkForInjection {
+					if s, ok := q.Runtime.CheckForInjection(param); ok {
+						return e.Error(e.QueryInjection, e.Severity(s))
+					}
 				}
 
 				cradle.Exps.Push(param)
@@ -142,8 +158,10 @@ func (q *QueryEngine) Sync() error {
 					exp[k] = Format("?", v) // Sanitize values
 
 					// Detect injection in keys
-					if s, ok := q.Runtime.CheckForInjection(k); ok {
-						return e.Error(e.QueryInjection, e.Severity(s))
+					if q.checkForInjection {
+						if s, ok := q.Runtime.CheckForInjection(k); ok {
+							return e.Error(e.QueryInjection, e.Severity(s))
+						}
 					}
 				}
 				cradle.Exps.Push(exp)
@@ -158,8 +176,10 @@ func (q *QueryEngine) Sync() error {
 
 					param := qr.Params.(string)
 
-					if s, ok := q.Runtime.CheckForInjection(param); ok {
-						return e.Error(e.QueryInjection, e.Severity(s))
+					if q.checkForInjection {
+						if s, ok := q.Runtime.CheckForInjection(param); ok {
+							return e.Error(e.QueryInjection, e.Severity(s))
+						}
 					}
 
 					cradle.Exps.Push(param)

@@ -19,12 +19,14 @@ func main() {
 
 	lucifer := lucy.Lucy{}
 
+
 	lucifer.AddRuntime(dialects.NewNeo4jRuntime())
 
 	peep := Person{}
 
 	db := lucifer.DB()
-	err := db.Where(lucy.Exp{"name": "Vishaal"}).And("age >= ?", 19).Find(&peep).Error
+
+	err := db.Where(lucy.Exp{"name": "Vishaal"}).And("age >= ? SET", 19).Find(&peep).Error
 
 	fmt.Println(time.Now().Sub(t))
 
