@@ -61,7 +61,7 @@ func (l *Database) Find(param interface{}) *Database {
 		return l
 	}
 
-	l.addQuery(Query{DomainType: SetTarget, Params: Marshal(param), Output: param})
+	l.addQuery(Query{FamilyType: SetTarget, Params: Marshal(param), Output: param})
 	l.Error = l.layer.Sync()
 
 	return l
@@ -74,9 +74,9 @@ func (l *Database) Where(I_ interface{}, I ...interface{}) *Database {
 
 	if reflect.TypeOf(I_) == reflect.TypeOf(Exp{}) {
 		Exp := I_
-		l.addQuery(Query{DomainType: Where, Params: Exp})
+		l.addQuery(Query{FamilyType: Where, Params: Exp})
 	} else if reflect.TypeOf(I_) == reflect.TypeOf("") {
-		l.addQuery(Query{DomainType: WhereStr, Params: Format(I_.(string), I)})
+		l.addQuery(Query{FamilyType: WhereStr, Params: Format(I_.(string), I)})
 	} else {
 		l.Error = e.Error(e.UnrecognizedExpression)
 	}
@@ -89,7 +89,7 @@ func (l *Database) Create(params interface{}) *Database {
 		return l
 	}
 
-	l.addQuery(Query{DomainType: Creation, Params: Marshal(params)})
+	l.addQuery(Query{FamilyType: Creation, Params: Marshal(params)})
 	l.Error = l.layer.Sync()
 
 	return l
@@ -102,9 +102,9 @@ func (l *Database) And(I_ interface{}, I ...interface{}) *Database {
 
 	if reflect.TypeOf(I_) == reflect.TypeOf(Exp{}) {
 		Exp := I_
-		l.addQuery(Query{DomainType: And, Params: Exp})
+		l.addQuery(Query{FamilyType: And, Params: Exp})
 	} else if reflect.TypeOf(I_) == reflect.TypeOf("") {
-		l.addQuery(Query{DomainType: AndStr, Params: Format(I_.(string), I)})
+		l.addQuery(Query{FamilyType: AndStr, Params: Format(I_.(string), I)})
 	} else {
 		l.Error = e.Error(e.UnrecognizedExpression)
 	}
@@ -119,9 +119,9 @@ func (l *Database) Or(I_ interface{}, I ...interface{}) *Database {
 
 	if reflect.TypeOf(I_) == reflect.TypeOf(Exp{}) {
 		Exp := I_
-		l.addQuery(Query{DomainType: Or, Params: Exp})
+		l.addQuery(Query{FamilyType: Or, Params: Exp})
 	} else if reflect.TypeOf(I_) == reflect.TypeOf("") {
-		l.addQuery(Query{DomainType: OrStr, Params: Format(I_.(string), I)})
+		l.addQuery(Query{FamilyType: OrStr, Params: Format(I_.(string), I)})
 	} else {
 		l.Error = e.Error(e.UnrecognizedExpression)
 	}
@@ -134,7 +134,7 @@ func (l *Database) By(name string) *Database {
 		return l
 	}
 
-	l.addQuery(Query{DomainType: MiscNodeName, Params: name})
+	l.addQuery(Query{FamilyType: MiscNodeName, Params: name})
 
 	return l
 }
@@ -144,7 +144,7 @@ func (l *Database) Model(i interface{}) *Database {
 		return l
 	}
 
-	l.addQuery(Query{DomainType: Model, Params: Marshal(i)})
+	l.addQuery(Query{FamilyType: Model, Params: Marshal(i)})
 
 	return l
 }

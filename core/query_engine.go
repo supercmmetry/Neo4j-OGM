@@ -4,21 +4,20 @@ import (
 	e "lucy/errors"
 )
 
-
 type QueryCradle struct {
-	Exps      Queue
-	Ops       Queue
-	dom, pdom DomainType
-	deps      map[DomainType]struct{}
-	Out       interface{}
+	Exps               Queue
+	Ops                Queue
+	family, prevFamily FamilyType
+	deps               map[FamilyType]struct{}
+	Out                interface{}
 }
 
 func (c *QueryCradle) init() {
-	c.dom = Unknown
-	c.pdom = Unknown
+	c.family = Unknown
+	c.prevFamily = Unknown
 	c.Exps.Init()
 	c.Ops.Init()
-	c.deps = make(map[DomainType]struct{})
+	c.deps = make(map[FamilyType]struct{})
 }
 
 type QueryRuntime interface {
@@ -65,15 +64,15 @@ func (q *QueryEngine) Sync() error {
 
 		qr := qri.(Query)
 
-		cradle.dom = qr.DomainType
-		switch qr.DomainType {
+		cradle.family = qr.FamilyType
+		switch qr.FamilyType {
 		case Where:
 			{
-				if cradle.pdom == Where {
+				if cradle.prevFamily== Where {
 					return e.Error(e.CorruptedQueryChain)
 				}
 				exp := qr.Params.(Exp)
-				for k,v := range exp {
+				for k, v := range exp {
 					exp[k] = Format("?", v) // Sanitize values
 
 					// Detect injection in keys
@@ -86,74 +85,11 @@ func (q *QueryEngine) Sync() error {
 
 				cradle.deps[Where] = struct{}{}
 			}
-		case WhereStr: {
-			if cradle.pdom == Where {
-				return e.Error(e.CorruptedQueryChain)
-			}
-			param := qr.Params.(string)
-
-			if s, ok := q.Runtime.CheckForInjection(param); ok {
-				return e.Error(e.QueryInjection, e.Severity(s))
-			}
-
-			cradle.Exps.Push(param)
-			cradle.Ops.Push(cradle.dom)
-
-			cradle.deps[Where] = struct{}{}
-		}
-		case And:
+		case WhereStr:
 			{
-				if _, ok := cradle.deps[Where]; !ok {
-					return e.Error(e.UnsatisfiedDependency)
+				if cradle.prevFamily == Where {
+					return e.Error(e.CorruptedQueryChain)
 				}
-				exp := qr.Params.(Exp)
-				for k,v := range exp {
-					exp[k] = Format("?", v) // Sanitize values
-
-					// Detect injection in keys
-					if s, ok := q.Runtime.CheckForInjection(k); ok {
-						return e.Error(e.QueryInjection, e.Severity(s))
-					}
-				}
-				cradle.Exps.Push(exp)
-				cradle.Ops.Push(cradle.dom)
-			}
-		case AndStr:{
-			if _, ok := cradle.deps[Where]; !ok {
-				return e.Error(e.UnsatisfiedDependency)
-			}
-			param := qr.Params.(string)
-
-			if s, ok := q.Runtime.CheckForInjection(param); ok {
-				return e.Error(e.QueryInjection, e.Severity(s))
-			}
-
-			cradle.Exps.Push(param)
-			cradle.Ops.Push(cradle.dom)
-		}
-		case Or:
-			{
-				if _, ok := q.cradle.deps[Where]; !ok {
-					return e.Error(e.UnsatisfiedDependency)
-				}
-				exp := qr.Params.(Exp)
-				for k,v := range exp {
-					exp[k] = Format("?", v) // Sanitize values
-
-					// Detect injection in keys
-					if s, ok := q.Runtime.CheckForInjection(k); ok {
-						return e.Error(e.QueryInjection, e.Severity(s))
-					}
-				}
-				cradle.Exps.Push(exp)
-				cradle.Ops.Push(cradle.dom)
-			}
-		case OrStr:{
-			{
-				if _, ok := q.cradle.deps[Where]; !ok {
-					return e.Error(e.UnsatisfiedDependency)
-				}
-
 				param := qr.Params.(string)
 
 				if s, ok := q.Runtime.CheckForInjection(param); ok {
@@ -161,9 +97,75 @@ func (q *QueryEngine) Sync() error {
 				}
 
 				cradle.Exps.Push(param)
-				cradle.Ops.Push(cradle.dom)
+				cradle.Ops.Push(cradle.family)
+
+				cradle.deps[Where] = struct{}{}
 			}
-		}
+		case And:
+			{
+				if _, ok := cradle.deps[Where]; !ok {
+					return e.Error(e.UnsatisfiedDependency)
+				}
+				exp := qr.Params.(Exp)
+				for k, v := range exp {
+					exp[k] = Format("?", v) // Sanitize values
+
+					// Detect injection in keys
+					if s, ok := q.Runtime.CheckForInjection(k); ok {
+						return e.Error(e.QueryInjection, e.Severity(s))
+					}
+				}
+				cradle.Exps.Push(exp)
+				cradle.Ops.Push(cradle.family)
+			}
+		case AndStr:
+			{
+				if _, ok := cradle.deps[Where]; !ok {
+					return e.Error(e.UnsatisfiedDependency)
+				}
+				param := qr.Params.(string)
+
+				if s, ok := q.Runtime.CheckForInjection(param); ok {
+					return e.Error(e.QueryInjection, e.Severity(s))
+				}
+
+				cradle.Exps.Push(param)
+				cradle.Ops.Push(cradle.family)
+			}
+		case Or:
+			{
+				if _, ok := q.cradle.deps[Where]; !ok {
+					return e.Error(e.UnsatisfiedDependency)
+				}
+				exp := qr.Params.(Exp)
+				for k, v := range exp {
+					exp[k] = Format("?", v) // Sanitize values
+
+					// Detect injection in keys
+					if s, ok := q.Runtime.CheckForInjection(k); ok {
+						return e.Error(e.QueryInjection, e.Severity(s))
+					}
+				}
+				cradle.Exps.Push(exp)
+				cradle.Ops.Push(cradle.family)
+			}
+		case OrStr:
+			{
+				{
+					if _, ok := q.cradle.deps[Where]; !ok {
+						return e.Error(e.UnsatisfiedDependency)
+					}
+
+					param := qr.Params.(string)
+
+					if s, ok := q.Runtime.CheckForInjection(param); ok {
+						return e.Error(e.QueryInjection, e.Severity(s))
+					}
+
+					cradle.Exps.Push(param)
+					cradle.Ops.Push(cradle.family)
+				}
+			}
 		case SetTarget:
 			{
 				/* If the 'Where' clause is used in conjunction with 'SetTarget (aka) Find' ,
@@ -180,13 +182,14 @@ func (q *QueryEngine) Sync() error {
 
 				cradle.Out = qr.Output
 			}
-		case MiscNodeName: {
-			cradle.Ops.Push(MiscNodeName)
-			cradle.Exps.Push(qr.Params)
-		}
+		case MiscNodeName:
+			{
+				cradle.Ops.Push(MiscNodeName)
+				cradle.Exps.Push(qr.Params)
+			}
 		}
 
-		cradle.pdom = cradle.dom
+		cradle.prevFamily = cradle.family
 	}
 
 	return nil

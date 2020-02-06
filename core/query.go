@@ -1,7 +1,7 @@
 package lucy
 
 type Query struct {
-	DomainType DomainType
+	FamilyType FamilyType
 	Params     interface{}
 	Output     interface{}
 }
