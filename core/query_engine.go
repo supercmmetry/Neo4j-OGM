@@ -4,6 +4,11 @@ import (
 	e "github.com/supercmmetry/lucy/errors"
 )
 
+/* The QueryCradle is responsible for storing expressions and operators
+parsed from the OGM chain. The QueryCradle is then directly passed to the
+dialect-specific runtime, to generate queries.
+ */
+
 type QueryCradle struct {
 	Exps               Queue
 	Ops                Queue
@@ -20,11 +25,21 @@ func (c *QueryCradle) init() {
 	c.deps = make(map[FamilyType]struct{})
 }
 
+/*
+The QueryRuntime is entirely dialect-specific and is used to translate QueryCradle in order to generate
+dialect-specific queries. It is also responsible for executing the generated queries.
+ */
+
 type QueryRuntime interface {
 	CheckForInjection(expStr string) (uint, bool)
 	Compile(cradle *QueryCradle) (string, error)
 	Execute(query string, target interface{}) error
 }
+
+/*
+The QueryEngine is responsible fo parsing the OGM chain to generate the QueryCradle.
+OGM-chain specific functions are carried out here.
+ */
 
 type QueryEngine struct {
 	queue             *Queue
