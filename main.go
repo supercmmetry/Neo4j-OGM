@@ -2,20 +2,18 @@ package main
 
 import (
 	"fmt"
-	lucy "lucy/core"
-	"lucy/dialects"
+	lucy "github.com/supercmmetry/lucy/core"
+	"github.com/supercmmetry/lucy/dialects"
 	"time"
 )
 
 type Person struct {
 	Name string `lucy:"name"`
 	Age  uint   `lucy:"age"`
-
 }
 
 func main() {
 	fmt.Println("lucy - devel")
-
 
 	t := time.Now()
 

@@ -2,7 +2,7 @@ package lucy
 
 import (
 	"fmt"
-	e "lucy/errors"
+	e "github.com/supercmmetry/lucy/errors"
 	"reflect"
 	"strconv"
 )

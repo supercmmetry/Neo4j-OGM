@@ -1,7 +1,7 @@
 package lucy
 
 import (
-	e "lucy/errors"
+	e "github.com/supercmmetry/lucy/errors"
 	"reflect"
 )
 
@@ -60,7 +60,6 @@ func (l *Database) Find(param interface{}) *Database {
 	if l.Error != nil {
 		return l
 	}
-
 	l.addQuery(Query{FamilyType: SetTarget, Params: Marshal(param), Output: param})
 	l.Error = l.layer.Sync()
 

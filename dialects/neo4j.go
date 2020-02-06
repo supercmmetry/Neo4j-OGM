@@ -3,8 +3,8 @@ package dialects
 import (
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 
-	lucy "lucy/core"
-	lucyErr "lucy/errors"
+	lucy "github.com/supercmmetry/lucy/core"
+	lucyErr "github.com/supercmmetry/lucy/errors"
 
 	"regexp"
 	"strings"
