@@ -96,13 +96,14 @@ func Format(format string, I ...interface{}) string {
 				{
 					newStr += fmt.Sprintf("%f", I[i].(float64))
 				}
-			case reflect.Bool: {
-				if I[i].(bool) {
-					newStr += "true"
-				} else {
-					newStr += "false"
+			case reflect.Bool:
+				{
+					if I[i].(bool) {
+						newStr += "true"
+					} else {
+						newStr += "false"
+					}
 				}
-			}
 			}
 		} else {
 			newStr += string(chr)

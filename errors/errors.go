@@ -10,9 +10,9 @@ const (
 )
 
 const (
-	NoSeverity     = iota
-	LowSeverity    = iota
-	HighSeverity   = iota
+	NoSeverity   = iota
+	LowSeverity  = iota
+	HighSeverity = iota
 )
 
 var (
@@ -65,9 +65,9 @@ type InjectionSeverity struct {
 
 func (s *InjectionSeverity) Init() *InjectionSeverity {
 	s.sevMap = map[uint]string{
-		HighSeverity:   "(severity high)",
-		LowSeverity:    "(severity low)",
-		NoSeverity:     "",
+		HighSeverity: "(severity high)",
+		LowSeverity:  "(severity low)",
+		NoSeverity:   "",
 	}
 	return s
 }

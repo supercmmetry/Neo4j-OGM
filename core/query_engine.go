@@ -68,7 +68,7 @@ func (q *QueryEngine) Sync() error {
 		switch qr.FamilyType {
 		case Where:
 			{
-				if cradle.prevFamily== Where {
+				if cradle.prevFamily == Where {
 					return e.Error(e.CorruptedQueryChain)
 				}
 				exp := qr.Params.(Exp)
