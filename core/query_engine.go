@@ -1,6 +1,7 @@
 package lucy
 
 import (
+	"fmt"
 	e "github.com/supercmmetry/lucy/errors"
 )
 
@@ -211,7 +212,11 @@ func (q *QueryEngine) Sync() error {
 					cradle.Ops.Push(SetTarget)
 				} else {
 					cradle.Ops.Push(Where)
-					cradle.Exps.Push(qr.Params.(Exp))
+					exp := qr.Params.(Exp)
+					for k, v := range exp {
+						exp[k] = Format("?", v)
+					}
+					cradle.Exps.Push(exp)
 					cradle.Ops.Push(SetTarget)
 				}
 
@@ -221,11 +226,37 @@ func (q *QueryEngine) Sync() error {
 			{
 				cradle.Ops.Push(MiscNodeName)
 				cradle.Exps.Push(qr.Params)
+				cradle.deps[MiscNodeName] = struct{}{}
 			}
+		case Creation:
+			cradle.Ops.Push(cradle.family)
+
+			exp := qr.Params.(Exp)
+			for k, v := range exp {
+				exp[k] = Format("?", v)
+			}
+			cradle.Exps.Push(exp)
+			cradle.Out = qr.Output
+
 		}
 
 		cradle.prevFamily = cradle.family
 	}
 
+
+	query, err := q.Runtime.Compile(q.cradle)
+	if err != nil {
+		q.cradle.init()
+		return err
+	}
+
+	fmt.Println("Generated query: ", query)
+
+	if err := q.Runtime.Execute(query, q.cradle.Out); err != nil {
+		q.cradle.init()
+		return err
+	}
+
+	q.cradle.init()
 	return nil
 }

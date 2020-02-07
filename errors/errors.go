@@ -1,18 +1,18 @@
 package lucyErr
 
 const (
-	EmptyQueue             = iota
-	UnsatisfiedDependency  = iota
-	CorruptedQueryChain    = iota
-	ExpressionExpected     = iota
-	UnrecognizedExpression = iota
-	QueryInjection         = iota
+	EmptyQueue = iota
+	UnsatisfiedDependency
+	CorruptedQueryChain
+	ExpressionExpected
+	UnrecognizedExpression
+	QueryInjection
 )
 
 const (
 	NoSeverity   = iota
-	LowSeverity  = iota
-	HighSeverity = iota
+	LowSeverity
+	HighSeverity
 )
 
 var (

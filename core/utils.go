@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-func Marshal(v interface{}) map[string]interface{} {
+func Marshal(v interface{}) Exp {
 	vtype := reflect.TypeOf(v)
 	vvalue := reflect.ValueOf(v)
 
@@ -27,7 +27,54 @@ func Marshal(v interface{}) map[string]interface{} {
 	return tagMap
 }
 
-func Format(format string, I ...interface{}) string {
+func Unmarshal(src map[string]interface{}, dest interface{}) {
+	vtype := reflect.TypeOf(dest)
+	vvalue := reflect.ValueOf(dest)
+
+	if vtype.Kind() != reflect.Struct {
+		vtype = reflect.TypeOf(dest).Elem()
+		vvalue = reflect.ValueOf(dest).Elem()
+	}
+
+	for i := 0; i < vtype.NumField(); i++ {
+		if tagName, ok := vtype.Field(i).Tag.Lookup("lucy"); ok {
+			obj := src[tagName]
+
+			switch reflect.TypeOf(vvalue.Field(i).Interface()).Kind() {
+			case reflect.String:
+				vvalue.Field(i).SetString(obj.(string))
+			case reflect.Bool:
+				vvalue.Field(i).SetBool(obj.(bool))
+			case reflect.Int:
+				vvalue.Field(i).SetInt(obj.(int64))
+			case reflect.Int8:
+				vvalue.Field(i).SetInt(obj.(int64))
+			case reflect.Int16:
+				vvalue.Field(i).SetInt(obj.(int64))
+			case reflect.Int32:
+				vvalue.Field(i).SetInt(obj.(int64))
+			case reflect.Int64:
+				vvalue.Field(i).SetInt(obj.(int64))
+			case reflect.Uint:
+				vvalue.Field(i).SetUint(obj.(uint64))
+			case reflect.Uint8:
+				vvalue.Field(i).SetUint(obj.(uint64))
+			case reflect.Uint16:
+				vvalue.Field(i).SetUint(obj.(uint64))
+			case reflect.Uint32:
+				vvalue.Field(i).SetUint(obj.(uint64))
+			case reflect.Uint64:
+				vvalue.Field(i).SetUint(obj.(uint64))
+			case reflect.Float32:
+				vvalue.Field(i).SetFloat(obj.(float64))
+			case reflect.Float64:
+				vvalue.Field(i).SetFloat(obj.(float64))
+			}
+		}
+	}
+}
+
+func SFormat(format string, I []interface{}) string {
 	newStr := ""
 	index := 0
 	for _, chr := range format {
@@ -110,6 +157,10 @@ func Format(format string, I ...interface{}) string {
 		}
 	}
 	return newStr
+}
+
+func Format(format string, I ...interface{}) string {
+	return SFormat(format, I)
 }
 
 type Queue struct {

@@ -62,14 +62,14 @@ func (l *Database) ToggleInjectionCheck() {
 	l.layer.ToggleInjectionCheck()
 }
 
-func (l *Database) Find(param interface{}) *Database {
+func (l *Database) Find(param interface{}) error {
 	if l.Error != nil {
-		return l
+		return l.Error
 	}
 	l.addQuery(Query{FamilyType: SetTarget, Params: Marshal(param), Output: param})
 	l.Error = l.layer.Sync()
 
-	return l
+	return l.Error
 }
 
 func (l *Database) Where(I_ interface{}, I ...interface{}) *Database {
@@ -80,8 +80,8 @@ func (l *Database) Where(I_ interface{}, I ...interface{}) *Database {
 	if reflect.TypeOf(I_) == reflect.TypeOf(Exp{}) {
 		Exp := I_
 		l.addQuery(Query{FamilyType: Where, Params: Exp})
-	} else if reflect.TypeOf(I_) == reflect.TypeOf("") {
-		l.addQuery(Query{FamilyType: WhereStr, Params: Format(I_.(string), I)})
+	} else if reflect.TypeOf(I_).Kind() == reflect.String {
+		l.addQuery(Query{FamilyType: WhereStr, Params: SFormat(I_.(string), I)})
 	} else {
 		l.Error = e.Error(e.UnrecognizedExpression)
 	}
@@ -89,15 +89,15 @@ func (l *Database) Where(I_ interface{}, I ...interface{}) *Database {
 	return l
 }
 
-func (l *Database) Create(params interface{}) *Database {
+func (l *Database) Create(params interface{}) error {
 	if l.Error != nil {
-		return l
+		return l.Error
 	}
 
-	l.addQuery(Query{FamilyType: Creation, Params: Marshal(params)})
+	l.addQuery(Query{FamilyType: Creation, Params: Marshal(params), Output: params})
 	l.Error = l.layer.Sync()
 
-	return l
+	return l.Error
 }
 
 func (l *Database) And(I_ interface{}, I ...interface{}) *Database {
@@ -108,8 +108,8 @@ func (l *Database) And(I_ interface{}, I ...interface{}) *Database {
 	if reflect.TypeOf(I_) == reflect.TypeOf(Exp{}) {
 		Exp := I_
 		l.addQuery(Query{FamilyType: And, Params: Exp})
-	} else if reflect.TypeOf(I_) == reflect.TypeOf("") {
-		l.addQuery(Query{FamilyType: AndStr, Params: Format(I_.(string), I)})
+	} else if reflect.TypeOf(I_).Kind() == reflect.String {
+		l.addQuery(Query{FamilyType: AndStr, Params: SFormat(I_.(string), I)})
 	} else {
 		l.Error = e.Error(e.UnrecognizedExpression)
 	}
@@ -125,8 +125,8 @@ func (l *Database) Or(I_ interface{}, I ...interface{}) *Database {
 	if reflect.TypeOf(I_) == reflect.TypeOf(Exp{}) {
 		Exp := I_
 		l.addQuery(Query{FamilyType: Or, Params: Exp})
-	} else if reflect.TypeOf(I_) == reflect.TypeOf("") {
-		l.addQuery(Query{FamilyType: OrStr, Params: Format(I_.(string), I)})
+	} else if reflect.TypeOf(I_).Kind() == reflect.String {
+		l.addQuery(Query{FamilyType: OrStr, Params: SFormat(I_.(string), I)})
 	} else {
 		l.Error = e.Error(e.UnrecognizedExpression)
 	}
