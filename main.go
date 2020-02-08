@@ -29,14 +29,13 @@ func main() {
 	db := lucifer.DB()
 
 	t := time.Now()
-
 	// err = db.Create(Person{Name: "Vishaal", Age: 20})
 
 	if err != nil {
 		panic(err)
 	}
 
-	err = db.Where("name = ?", "Vishaal").And("age >= ?", 18).Find(&peep)
+	err = db.Where("name = ?", "Vishaal").And("age >= ?", 18).Find(&peep).Error
 
 	if err != nil {
 		panic(err)
@@ -44,7 +43,7 @@ func main() {
 
 	fmt.Println(time.Now().Sub(t))
 
-	err = db.Model(peep).Where("name = ?", "Vishaal").Set("age = ?", peep.Age + 1)
+	err = db.Model(peep).Where("name = ?", "Vishaal").Set("age = ?", peep.Age + 1).Error
 
 	if err != nil {
 		panic(err)

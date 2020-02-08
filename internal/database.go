@@ -9,6 +9,7 @@ type Layer interface {
 	AddRuntime(rt QueryRuntime)
 	ToggleInjectionCheck()
 }
+
 type Database struct {
 	Queue Queue
 	Error error
@@ -32,14 +33,14 @@ func (l *Database) ToggleInjectionCheck() {
 	l.layer.ToggleInjectionCheck()
 }
 
-func (l *Database) Find(param interface{}) error {
+func (l *Database) Find(param interface{}) *Database {
 	if l.Error != nil {
-		return l.Error
+		return l
 	}
 	l.addQuery(Query{FamilyType: SetTarget, Params: Marshal(param), Output: param})
 	l.Error = l.layer.Sync()
 
-	return l.Error
+	return l
 }
 
 func (l *Database) Where(I_ interface{}, I ...interface{}) *Database {
@@ -56,15 +57,15 @@ func (l *Database) Where(I_ interface{}, I ...interface{}) *Database {
 	return l
 }
 
-func (l *Database) Create(params interface{}) error {
+func (l *Database) Create(params interface{}) *Database {
 	if l.Error != nil {
-		return l.Error
+		return l
 	}
 
 	l.addQuery(Query{FamilyType: Creation, Params: Marshal(params), Output: params})
 	l.Error = l.layer.Sync()
 
-	return l.Error
+	return l
 }
 
 func (l *Database) And(I_ interface{}, I ...interface{}) *Database {
@@ -105,9 +106,9 @@ func (l *Database) By(name string) *Database {
 	return l
 }
 
-func (l *Database) Set(I_ interface{}, I ...interface{}) error {
+func (l *Database) Set(I_ interface{}, I ...interface{}) *Database {
 	if l.Error != nil {
-		return l.Error
+		return l
 	}
 
 	if reflect.TypeOf(I_).Kind() == reflect.Ptr && reflect.TypeOf(I_).Elem().Kind() == reflect.Struct {
@@ -119,7 +120,7 @@ func (l *Database) Set(I_ interface{}, I ...interface{}) error {
 	}
 	l.Error = l.layer.Sync()
 
-	return l.Error
+	return l
 }
 
 func (l *Database) Model(i interface{}) *Database {
