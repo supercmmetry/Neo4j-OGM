@@ -7,7 +7,7 @@ import (
 /* The QueryCradle is responsible for storing expressions and operators
 parsed from the OGM chain. The QueryCradle is then directly passed to the
 dialect-specific runtime, to generate queries.
- */
+*/
 
 type QueryCradle struct {
 	Exps               Queue
@@ -28,7 +28,7 @@ func (c *QueryCradle) init() {
 /*
 The QueryRuntime is entirely dialect-specific and is used to translate QueryCradle in order to generate
 dialect-specific queries. It is also responsible for executing the generated queries.
- */
+*/
 
 type QueryRuntime interface {
 	CheckForInjection(expStr string) (uint, bool)
@@ -39,7 +39,7 @@ type QueryRuntime interface {
 /*
 The QueryEngine is responsible fo parsing the OGM chain to generate the QueryCradle.
 OGM-chain specific functions are carried out here.
- */
+*/
 
 type QueryEngine struct {
 	queue             *Queue
@@ -87,84 +87,73 @@ func (q *QueryEngine) Sync() error {
 
 		cradle.family = qr.FamilyType
 		switch qr.FamilyType {
+		case Model:
+			cradle.Exps.Push(qr.Params.(string))
+			cradle.Ops.Push(cradle.family)
+			cradle.deps[Model] = struct{}{}
+			break
 		case Where:
-			{
-				if cradle.prevFamily == Where {
-					return Error(CorruptedQueryChain)
-				}
-				param := qr.Params.(string)
-
-				if q.checkForInjection {
-					if s, ok := q.Runtime.CheckForInjection(param); ok {
-						return Error(QueryInjection, Severity(s))
-					}
-				}
-
-				cradle.Exps.Push(param)
-				cradle.Ops.Push(cradle.family)
-
-				cradle.deps[Where] = struct{}{}
+			if _, ok := q.cradle.deps[Where]; ok {
+				return Error(CorruptedQueryChain, "Where() used more than once in query chain")
 			}
+
+			param := qr.Params.(string)
+
+			if q.checkForInjection {
+				if s, ok := q.Runtime.CheckForInjection(param); ok {
+					return Error(QueryInjection, Severity(s))
+				}
+			}
+
+			cradle.Exps.Push(param)
+			cradle.Ops.Push(cradle.family)
+
+			cradle.deps[Where] = struct{}{}
+			break
 		case And:
-			{
-				if _, ok := cradle.deps[Where]; !ok {
-					return Error(UnsatisfiedDependency)
-				}
-				param := qr.Params.(string)
-
-				if q.checkForInjection {
-					if s, ok := q.Runtime.CheckForInjection(param); ok {
-						return Error(QueryInjection, Severity(s))
-					}
-				}
-
-				cradle.Exps.Push(param)
-				cradle.Ops.Push(cradle.family)
+			if _, ok := cradle.deps[Where]; !ok {
+				return Error(UnsatisfiedDependency, "missing: Where()")
 			}
+			param := qr.Params.(string)
+
+			if q.checkForInjection {
+				if s, ok := q.Runtime.CheckForInjection(param); ok {
+					return Error(QueryInjection, Severity(s))
+				}
+			}
+
+			cradle.Exps.Push(param)
+			cradle.Ops.Push(cradle.family)
+			break
 		case Or:
-			{
-				{
-					if _, ok := q.cradle.deps[Where]; !ok {
-						return Error(UnsatisfiedDependency)
-					}
+			if _, ok := q.cradle.deps[Where]; !ok {
+				return Error(UnsatisfiedDependency, "missing: Where()")
+			}
 
-					param := qr.Params.(string)
+			param := qr.Params.(string)
 
-					if q.checkForInjection {
-						if s, ok := q.Runtime.CheckForInjection(param); ok {
-							return Error(QueryInjection, Severity(s))
-						}
-					}
-
-					cradle.Exps.Push(param)
-					cradle.Ops.Push(cradle.family)
+			if q.checkForInjection {
+				if s, ok := q.Runtime.CheckForInjection(param); ok {
+					return Error(QueryInjection, Severity(s))
 				}
 			}
+
+			cradle.Exps.Push(param)
+			cradle.Ops.Push(cradle.family)
+			break
 		case SetTarget:
-			{
-				/* If the 'Where' clause is used in conjunction with 'SetTarget (aka) Find' ,
-				   then ignore params passed by query, otherwise do not ignore.
-				*/
-
-				if _, ok := q.cradle.deps[Where]; ok {
-					cradle.Ops.Push(SetTarget)
-				} else {
-					exp := qr.Params.(Exp)
-					for k, v := range exp {
-						exp[k] = Format("?", v)
-					}
-					cradle.Exps.Push(exp)
-					cradle.Ops.Push(SetTarget)
-				}
-
-				cradle.Out = qr.Output
+			if _, ok := q.cradle.deps[Where]; !ok {
+				return Error(UnsatisfiedDependency, "missing: Where()")
 			}
+
+			cradle.Ops.Push(SetTarget)
+			cradle.Out = qr.Output
+			break
 		case MiscNodeName:
-			{
-				cradle.Ops.Push(MiscNodeName)
-				cradle.Exps.Push(qr.Params)
-				cradle.deps[MiscNodeName] = struct{}{}
-			}
+			cradle.Ops.Push(MiscNodeName)
+			cradle.Exps.Push(qr.Params)
+			cradle.deps[MiscNodeName] = struct{}{}
+			break
 		case Creation:
 			cradle.Ops.Push(cradle.family)
 
@@ -174,12 +163,44 @@ func (q *QueryEngine) Sync() error {
 			}
 			cradle.Exps.Push(exp)
 			cradle.Out = qr.Output
+			break
+		case Updation:
+			if _, ok := q.cradle.deps[Where]; !ok {
+				return Error(UnsatisfiedDependency, "missing: Where()")
+			}
 
+			cradle.Ops.Push(cradle.family)
+
+			exp := qr.Params.(Exp)
+			for k, v := range exp {
+				exp[k] = Format("?", v)
+			}
+			cradle.Exps.Push(exp)
+			break
+		case UpdationStr:
+			if _, ok := q.cradle.deps[Where]; !ok {
+				return Error(UnsatisfiedDependency, "missing: Where()")
+			}
+			if _, ok := q.cradle.deps[Model]; !ok {
+				return Error(UnsatisfiedDependency, "missing: Model()")
+			}
+
+			param := qr.Params.(string)
+
+			if q.checkForInjection {
+				if s, ok := q.Runtime.CheckForInjection(param); ok {
+					return Error(QueryInjection, Severity(s))
+				}
+			}
+
+			cradle.Exps.Push(param)
+			cradle.Ops.Push(cradle.family)
+			break
 		}
 
 		cradle.prevFamily = cradle.family
-	}
 
+	}
 
 	query, err := q.Runtime.Compile(q.cradle)
 	if err != nil {

@@ -105,12 +105,35 @@ func (l *Database) By(name string) *Database {
 	return l
 }
 
+func (l *Database) Set(I_ interface{}, I ...interface{}) error {
+	if l.Error != nil {
+		return l.Error
+	}
+
+	if reflect.TypeOf(I_).Kind() == reflect.Ptr && reflect.TypeOf(I_).Elem().Kind() == reflect.Struct {
+		l.addQuery(Query{FamilyType: Updation, Params: Marshal(I_), Output: I_})
+	} else if reflect.TypeOf(I_).Kind() == reflect.String {
+		l.addQuery(Query{FamilyType: UpdationStr, Params: SFormat(I_.(string), I)})
+	} else {
+		l.Error = Error(UnrecognizedExpression)
+	}
+	l.Error = l.layer.Sync()
+
+	return l.Error
+}
+
 func (l *Database) Model(i interface{}) *Database {
 	if l.Error != nil {
 		return l
 	}
 
-	l.addQuery(Query{FamilyType: Model, Params: Marshal(i)})
+	if reflect.TypeOf(i).Kind() == reflect.Struct {
+		l.addQuery(Query{FamilyType: Model, Params: reflect.TypeOf(i).Name()})
+	} else if reflect.TypeOf(i).Kind() == reflect.Ptr && reflect.TypeOf(i).Elem().Kind() == reflect.Struct {
+		l.addQuery(Query{FamilyType: Model, Params: reflect.TypeOf(i).Elem().Name()})
+	} else {
+		l.Error = Error(UnrecognizedExpression)
+	}
 
 	return l
 }
@@ -119,4 +142,3 @@ func (l *Database) Begin() *Database {
 	l.layer.StartTransaction()
 	return l
 }
-

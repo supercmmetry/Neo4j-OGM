@@ -42,7 +42,7 @@ func (e *LucyErrors) Init() *LucyErrors {
 func (e *LucyErrors) Error() string {
 	errStr := e.errorMap[e.Code]
 	if len(e.Data) > 0 {
-		return errStr + " " + e.Data
+		return errStr + " [" + e.Data + "]"
 	}
 	return errStr
 }
@@ -65,8 +65,8 @@ type InjectionSeverity struct {
 
 func (s *InjectionSeverity) Init() *InjectionSeverity {
 	s.sevMap = map[uint]string{
-		HighSeverity: "(severity: high)",
-		LowSeverity:  "(severity: low)",
+		HighSeverity: "severity: high",
+		LowSeverity:  "severity: low",
 		NoSeverity:   "",
 	}
 	return s

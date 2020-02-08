@@ -37,6 +37,15 @@ func main() {
 	}
 
 	err = db.Where("name = ?", "Vishaal").And("age >= ?", 18).Find(&peep)
+
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(time.Now().Sub(t))
+
+	err = db.Model(peep).Where("name = ?", "Vishaal").Set("age = ?", peep.Age + 1)
+
 	if err != nil {
 		panic(err)
 	}

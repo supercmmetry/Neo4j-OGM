@@ -39,9 +39,18 @@ func (n *Neo4jRuntime) marshalToCypherExp(exp e.Exp) string {
 	baseStr := ""
 
 	for k, v := range exp {
-		baseStr += fmt.Sprintf("%s: %s,", k, v)
+		baseStr += fmt.Sprintf("%s:%s ,", k, v)
 	}
 	return baseStr[:len(baseStr)-1]
+}
+
+func (n *Neo4jRuntime) marshalToCypherBody(exp e.Exp) string {
+	baseStr := ""
+
+	for k, v := range exp {
+		baseStr += fmt.Sprintf("%s = %s , ", k, v)
+	}
+	return baseStr[:len(baseStr)-4]
 }
 
 func (n *Neo4jRuntime) CheckForInjection(expStr string) (uint, bool) {
@@ -73,6 +82,12 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 
 	for _, op := range *cradle.Ops.GetAll() {
 		switch op {
+		case e.Model:
+			exp, err := cradle.Exps.Get()
+			if err != nil {
+				return "", err
+			}
+			className = exp.(string)
 		case e.SetTarget:
 			targetAction = "MATCH"
 			if reflect.TypeOf(cradle.Out).Kind() != reflect.Struct {
@@ -97,7 +112,6 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 			genQuery := fmt.Sprintf("%s (%s: %s) %s RETURN {result: %s}", targetAction, nodeName, className, queryBody, nodeName)
 			genQuery = n.prefixNodeName(genQuery, nodeName)
 			return genQuery, nil
-
 		case e.Creation:
 			if reflect.TypeOf(cradle.Out).Kind() != reflect.Struct {
 				className = reflect.TypeOf(cradle.Out).Elem().Name()
@@ -143,6 +157,44 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 				return "", err
 			}
 			nodeName = expression.(string)
+		case e.Updation:
+
+			if reflect.TypeOf(cradle.Out).Kind() != reflect.Struct {
+				className = reflect.TypeOf(cradle.Out).Elem().Name()
+			} else if reflect.TypeOf(cradle.Out).Kind() == reflect.Ptr {
+				className = reflect.TypeOf(cradle.Out).Name()
+			}
+
+			if nodeName == "" {
+				nodeName = "n"
+			}
+
+			exp, err := cradle.Exps.Get()
+			if err != nil {
+				return "", err
+			}
+
+			queryBody = n.prefixNodeName(queryBody, nodeName)
+			genQuery := fmt.Sprintf("MATCH (%s: %s) %s SET %s = {%s}", nodeName, className, queryBody, nodeName,
+				n.prefixNodeName(n.marshalToCypherExp(exp.(e.Exp)), nodeName))
+
+			return genQuery, nil
+		case e.UpdationStr:
+
+			if nodeName == "" {
+				nodeName = "n"
+			}
+
+			exp, err := cradle.Exps.Get()
+			if err != nil {
+				return "", err
+			}
+
+			queryBody = n.prefixNodeName(queryBody, nodeName)
+			genQuery := fmt.Sprintf("MATCH (%s: %s) %s SET %s", nodeName, className, queryBody,
+				n.prefixNodeName(exp.(string), nodeName))
+
+			return genQuery, nil
 		}
 	}
 
