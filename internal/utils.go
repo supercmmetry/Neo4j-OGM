@@ -2,10 +2,11 @@ package lucy
 
 import (
 	"fmt"
-	e "github.com/supercmmetry/lucy/errors"
 	"reflect"
 	"strconv"
 )
+
+type Exp map[string]interface{}
 
 func Marshal(v interface{}) Exp {
 	vtype := reflect.TypeOf(v)
@@ -182,7 +183,7 @@ func (q *Queue) Push(elem interface{}) {
 
 func (q *Queue) Pop() (interface{}, error) {
 	if (len(*q.elements)) == 0 {
-		return nil, e.Error(e.EmptyQueue)
+		return nil, Error(EmptyQueue)
 	}
 	elems := q.elements
 
@@ -194,7 +195,7 @@ func (q *Queue) Pop() (interface{}, error) {
 
 func (q *Queue) Get() (interface{}, error) {
 	if (len(*q.elements)) == 0 {
-		return nil, e.Error(e.EmptyQueue)
+		return nil, Error(EmptyQueue)
 	}
 	elem := (*q.elements)[0]
 	*q.elements = (*q.elements)[1:]

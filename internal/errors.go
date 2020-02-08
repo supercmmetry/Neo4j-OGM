@@ -1,4 +1,4 @@
-package lucyErr
+package lucy
 
 const (
 	EmptyQueue = iota

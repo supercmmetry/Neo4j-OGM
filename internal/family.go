@@ -14,7 +14,4 @@ const (
 	Or           FamilyType = iota
 	MiscNodeName FamilyType = iota
 	Model        FamilyType = iota
-	AndStr       FamilyType = iota
-	OrStr        FamilyType = iota
-	WhereStr     FamilyType = iota
 )

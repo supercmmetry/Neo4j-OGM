@@ -1,12 +1,11 @@
-package dialects
+package lucy
 
 import (
 	"fmt"
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 	"reflect"
 
-	lucy "github.com/supercmmetry/lucy/core"
-	lucyErr "github.com/supercmmetry/lucy/errors"
+	e "github.com/supercmmetry/lucy/internal"
 
 	"regexp"
 	"strings"
@@ -36,7 +35,7 @@ func (n *Neo4jRuntime) prefixNodeName(query string, nodeName string) string {
 	return query
 }
 
-func (n *Neo4jRuntime) marshalToCypherExp(exp lucy.Exp) string {
+func (n *Neo4jRuntime) marshalToCypherExp(exp e.Exp) string {
 	baseStr := ""
 
 	for k, v := range exp {
@@ -49,24 +48,24 @@ func (n *Neo4jRuntime) CheckForInjection(expStr string) (uint, bool) {
 	pcStr := InQuoteRegex.ReplaceAllString(strings.ToUpper(expStr), "")
 	splStr := strings.Split(pcStr, " ")
 
-	severity := lucyErr.NoSeverity
+	severity := e.NoSeverity
 
 	for _, clause := range CypherClauses {
 		for _, substr := range splStr {
 			if substr == clause {
-				severity = lucyErr.LowSeverity
+				severity = e.LowSeverity
 				for _, hclause := range HighSeverityClauses {
 					if hclause == clause {
-						return lucyErr.HighSeverity, true
+						return e.HighSeverity, true
 					}
 				}
 			}
 		}
 	}
-	return uint(severity), severity != lucyErr.NoSeverity
+	return uint(severity), severity != e.NoSeverity
 }
 
-func (n *Neo4jRuntime) Compile(cradle *lucy.QueryCradle) (string, error) {
+func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 	targetAction := ""
 	className := ""
 	nodeName := ""
@@ -74,7 +73,7 @@ func (n *Neo4jRuntime) Compile(cradle *lucy.QueryCradle) (string, error) {
 
 	for _, op := range *cradle.Ops.GetAll() {
 		switch op {
-		case lucy.SetTarget:
+		case e.SetTarget:
 			targetAction = "MATCH"
 			if reflect.TypeOf(cradle.Out).Kind() != reflect.Struct {
 				className = reflect.TypeOf(cradle.Out).Elem().Name()
@@ -86,11 +85,20 @@ func (n *Neo4jRuntime) Compile(cradle *lucy.QueryCradle) (string, error) {
 				nodeName = "n"
 			}
 
+			if queryBody == "" {
+				exp, err := cradle.Exps.Get()
+				if err != nil {
+					return "", err
+				}
+				queryBody = n.marshalToCypherExp(exp.(e.Exp))
+				return fmt.Sprintf("MATCH (%s: %s {%s}) RETURN {result: %s}", nodeName, className, queryBody, nodeName), nil
+			}
+
 			genQuery := fmt.Sprintf("%s (%s: %s) %s RETURN {result: %s}", targetAction, nodeName, className, queryBody, nodeName)
 			genQuery = n.prefixNodeName(genQuery, nodeName)
 			return genQuery, nil
 
-		case lucy.Creation:
+		case e.Creation:
 			if reflect.TypeOf(cradle.Out).Kind() != reflect.Struct {
 				className = reflect.TypeOf(cradle.Out).Elem().Name()
 			} else {
@@ -105,9 +113,9 @@ func (n *Neo4jRuntime) Compile(cradle *lucy.QueryCradle) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			genQuery := fmt.Sprintf("CREATE (%s:%s {%s})", nodeName, className, n.marshalToCypherExp(exp.(lucy.Exp)))
+			genQuery := fmt.Sprintf("CREATE (%s:%s {%s})", nodeName, className, n.marshalToCypherExp(exp.(e.Exp)))
 			return genQuery, nil
-		case lucy.WhereStr:
+		case e.Where:
 			queryBody = "WHERE"
 			expression, err := cradle.Exps.Get()
 			if err != nil {
@@ -115,21 +123,21 @@ func (n *Neo4jRuntime) Compile(cradle *lucy.QueryCradle) (string, error) {
 			}
 
 			queryBody = queryBody + " " + expression.(string)
-		case lucy.AndStr:
+		case e.And:
 			queryBody += " and"
 			expression, err := cradle.Exps.Get()
 			if err != nil {
 				return "", err
 			}
 			queryBody = queryBody + " " + expression.(string)
-		case lucy.OrStr:
+		case e.Or:
 			queryBody += " or"
 			expression, err := cradle.Exps.Get()
 			if err != nil {
 				return "", err
 			}
 			queryBody = queryBody + " " + expression.(string)
-		case lucy.MiscNodeName:
+		case e.MiscNodeName:
 			expression, err := cradle.Exps.Get()
 			if err != nil {
 				return "", err
@@ -149,12 +157,12 @@ func (n *Neo4jRuntime) Execute(query string, target interface{}) error {
 	for result.Next() {
 		record := result.Record().GetByIndex(0).(map[string]interface{})
 		node := record["result"].(neo4j.Node)
-		lucy.Unmarshal(node.Props(), target)
+		e.Unmarshal(node.Props(), target)
 	}
 	return nil
 }
 
-func NewNeo4jRuntime(driver neo4j.Driver) lucy.QueryRuntime {
+func NewNeo4jRuntime(driver neo4j.Driver) e.QueryRuntime {
 	runtime := &Neo4jRuntime{}
 	if session, err := driver.Session(neo4j.AccessModeWrite); err != nil {
 		panic(err)
