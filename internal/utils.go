@@ -12,9 +12,13 @@ func Marshal(v interface{}) Exp {
 	vtype := reflect.TypeOf(v)
 	vvalue := reflect.ValueOf(v)
 
-	if vtype.Kind() != reflect.Struct {
-		vtype = reflect.TypeOf(v).Elem()
-		vvalue = reflect.ValueOf(v).Elem()
+	for vtype.Kind() != reflect.Struct {
+		if vtype.Kind() == reflect.Ptr {
+			vvalue = vvalue.Elem()
+		} else if vtype.Kind() == reflect.Slice {
+			vvalue = reflect.New(vtype.Elem()).Elem()
+		}
+		vtype = vtype.Elem()
 	}
 
 	tagMap := make(map[string]interface{})
@@ -162,6 +166,12 @@ func SFormat(format string, I []interface{}) string {
 
 func Format(format string, I ...interface{}) string {
 	return SFormat(format, I)
+}
+
+func SanitizeExp(exp Exp){
+	for k, v := range exp {
+		exp[k] = Format("?", v)
+	}
 }
 
 type Queue struct {

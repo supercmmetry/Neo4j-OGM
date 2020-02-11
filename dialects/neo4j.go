@@ -17,9 +17,13 @@ type Neo4jRuntime struct {
 }
 
 var (
-	cypherKeyCaptureRegex = regexp.MustCompile("([^\\s]*?)\\s*(?:(?:<>)|(?:<=)|(?:>=)|(?:IS NULL)|(?:IS NOT NULL)|=|>|<)")
-	InQuoteRegex          = regexp.MustCompile("(?:(\"(?:.*?)\")|('(?:.*?)'))")
-	CypherClauses         = []string{"CREATE", "UPDATE", "MATCH", "RETURN", "WITH", "UNWIND", "WHERE", "EXISTS", "ORDER", "BY",
+	cypherKeyCaptureRegex = regexp.MustCompile("([^\\s]*?)\\s*(?:(?:<>)|(?:=~)|(?:<=)|(?:>=)|(?:(?i)IS NULL(?-i))" +
+		"|(?:(?i)IS NOT NULL(?-i))|(?:(?i)STARTS WITH(?-i))" +
+		"|(?:(?i)ENDS WITH(?-i))|(?:(?i)CONTAINS(?-i))" +
+		"|\\+|-|=|>|<)")
+
+	InQuoteRegex  = regexp.MustCompile("(?:(\"(?:.*?)\")|('(?:.*?)'))")
+	CypherClauses = []string{"CREATE", "UPDATE", "MATCH", "RETURN", "WITH", "UNWIND", "WHERE", "EXISTS", "ORDER", "BY",
 		"SKIP", "LIMIT", "USING", "DELETE", "DETACH", "REMOVE", "FOR", "EACH", "MERGE", "ON", "CALL", "YIELD", "USE",
 		"DROP", "START", "STOP", "SET"}
 	HighSeverityClauses = []string{"DELETE", "DETACH", "REMOVE", "DROP", "SET", "UPDATE", "CALL", "CREATE"}
@@ -90,9 +94,14 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 			className = exp.(string)
 		case e.SetTarget:
 			targetAction = "MATCH"
-			if reflect.TypeOf(cradle.Out).Kind() != reflect.Struct {
-				className = reflect.TypeOf(cradle.Out).Elem().Name()
-			} else {
+			if reflect.TypeOf(cradle.Out).Kind() == reflect.Ptr {
+				if reflect.TypeOf(cradle.Out).Elem().Kind() == reflect.Struct {
+					className = reflect.TypeOf(cradle.Out).Elem().Name()
+				} else if reflect.TypeOf(cradle.Out).Elem().Kind() == reflect.Slice &&
+					reflect.TypeOf(cradle.Out).Elem().Elem().Kind() == reflect.Struct {
+					className = reflect.TypeOf(cradle.Out).Elem().Elem().Name()
+				}
+			} else if reflect.TypeOf(cradle.Out).Kind() == reflect.Struct {
 				className = reflect.TypeOf(cradle.Out).Name()
 			}
 
@@ -113,9 +122,14 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 			genQuery = n.prefixNodeName(genQuery, nodeName)
 			return genQuery, nil
 		case e.Creation:
-			if reflect.TypeOf(cradle.Out).Kind() != reflect.Struct {
-				className = reflect.TypeOf(cradle.Out).Elem().Name()
-			} else {
+			if reflect.TypeOf(cradle.Out).Kind() == reflect.Ptr {
+				if reflect.TypeOf(cradle.Out).Elem().Kind() == reflect.Struct {
+					className = reflect.TypeOf(cradle.Out).Elem().Name()
+				} else if reflect.TypeOf(cradle.Out).Elem().Kind() == reflect.Slice &&
+					reflect.TypeOf(cradle.Out).Elem().Elem().Kind() == reflect.Struct {
+					className = reflect.TypeOf(cradle.Out).Elem().Elem().Name()
+				}
+			} else if reflect.TypeOf(cradle.Out).Kind() == reflect.Struct {
 				className = reflect.TypeOf(cradle.Out).Name()
 			}
 
@@ -159,9 +173,14 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 			nodeName = expression.(string)
 		case e.Updation:
 
-			if reflect.TypeOf(cradle.Out).Kind() != reflect.Struct {
-				className = reflect.TypeOf(cradle.Out).Elem().Name()
-			} else if reflect.TypeOf(cradle.Out).Kind() == reflect.Ptr {
+			if reflect.TypeOf(cradle.Out).Kind() == reflect.Ptr {
+				if reflect.TypeOf(cradle.Out).Elem().Kind() == reflect.Struct {
+					className = reflect.TypeOf(cradle.Out).Elem().Name()
+				} else if reflect.TypeOf(cradle.Out).Elem().Kind() == reflect.Slice &&
+					reflect.TypeOf(cradle.Out).Elem().Elem().Kind() == reflect.Struct {
+					className = reflect.TypeOf(cradle.Out).Elem().Elem().Name()
+				}
+			} else if reflect.TypeOf(cradle.Out).Kind() == reflect.Struct {
 				className = reflect.TypeOf(cradle.Out).Name()
 			}
 
@@ -170,13 +189,24 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 			}
 
 			exp, err := cradle.Exps.Get()
+
 			if err != nil {
 				return "", err
 			}
 
-			queryBody = n.prefixNodeName(queryBody, nodeName)
-			genQuery := fmt.Sprintf("MATCH (%s: %s) %s SET %s = {%s}", nodeName, className, queryBody, nodeName,
-				n.prefixNodeName(n.marshalToCypherExp(exp.(e.Exp)), nodeName))
+			genQuery := ""
+			if queryBody != "" {
+				queryBody = n.prefixNodeName(queryBody, nodeName)
+				genQuery = fmt.Sprintf("MATCH (%s: %s) %s SET %s = {%s}", nodeName, className, queryBody, nodeName,
+					n.prefixNodeName(n.marshalToCypherExp(exp.(e.Exp)), nodeName))
+			} else {
+				// We haven't encountered a where clause yet. So fetch search params from cradle.out
+				marsh := e.Marshal(cradle.Out)
+				e.SanitizeExp(marsh)
+				cypherA := n.marshalToCypherExp(marsh)
+				genQuery = fmt.Sprintf("MATCH (%s: %s {%s}) SET %s = {%s}", nodeName, className, cypherA,
+					nodeName, n.prefixNodeName(n.marshalToCypherExp(exp.(e.Exp)), nodeName))
+			}
 
 			return genQuery, nil
 		case e.UpdationStr:
@@ -186,13 +216,36 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 			}
 
 			exp, err := cradle.Exps.Get()
+
+
 			if err != nil {
 				return "", err
 			}
 
-			queryBody = n.prefixNodeName(queryBody, nodeName)
-			genQuery := fmt.Sprintf("MATCH (%s: %s) %s SET %s", nodeName, className, queryBody,
-				n.prefixNodeName(exp.(string), nodeName))
+			genQuery := ""
+
+			// If queryBody is non-empty this means that we have encountered a where clause.
+			if queryBody != "" {
+				queryBody = n.prefixNodeName(queryBody, nodeName)
+				genQuery = fmt.Sprintf("MATCH (%s: %s) %s SET %s", nodeName, className, queryBody,
+					n.prefixNodeName(exp.(string), nodeName))
+			} else {
+				// We haven't encountered a where clause yet. So fetch search params from cradle.out
+				marsh := e.Marshal(cradle.Out)
+				e.SanitizeExp(marsh)
+				cypherA := n.marshalToCypherExp(marsh)
+
+				if reflect.TypeOf(cradle.Out).Kind() == reflect.Ptr &&
+					reflect.TypeOf(cradle.Out).Elem().Kind() == reflect.Struct {
+
+					className = reflect.TypeOf(cradle.Out).Elem().Name()
+				} else if reflect.TypeOf(cradle.Out).Kind() == reflect.Struct {
+					className = reflect.TypeOf(cradle.Out).Name()
+				}
+
+				genQuery = fmt.Sprintf("MATCH (%s: %s {%s}) SET %s", nodeName, className, cypherA,
+					n.prefixNodeName(exp.(string), nodeName))
+			}
 
 			return genQuery, nil
 		}
@@ -206,11 +259,41 @@ func (n *Neo4jRuntime) Execute(query string, target interface{}) error {
 	if err != nil {
 		return err
 	}
-	for result.Next() {
-		record := result.Record().GetByIndex(0).(map[string]interface{})
-		node := record["result"].(neo4j.Node)
-		e.Unmarshal(node.Props(), target)
+
+	if target == nil {
+		return nil
 	}
+
+	targetType := reflect.TypeOf(target)
+
+	if targetType.Kind() == reflect.Ptr && targetType.Elem().Kind() == reflect.Slice &&
+		targetType.Elem().Elem().Kind() == reflect.Struct {
+
+		records := make([]map[string]interface{}, 0)
+		for result.Next() {
+			records = append(records, result.Record().GetByIndex(0).(map[string]interface{}))
+		}
+
+		reflectSlice := reflect.MakeSlice(targetType.Elem(), len(records), len(records))
+
+		for i := 0; i < len(records); i++ {
+			temp := reflect.New(targetType.Elem().Elem())
+			node := records[i]["result"].(neo4j.Node)
+			e.Unmarshal(node.Props(), temp.Interface())
+			reflectSlice.Index(i).Set(reflect.ValueOf(temp.Interface()).Elem())
+		}
+
+		reflect.ValueOf(target).Elem().Set(reflectSlice)
+
+	} else if targetType.Kind() == reflect.Ptr && targetType.Elem().Kind() == reflect.Struct {
+		// Stores the first record in the target.
+		if result.Next() {
+			record := result.Record().GetByIndex(0).(map[string]interface{})
+			node := record["result"].(neo4j.Node)
+			e.Unmarshal(node.Props(), target)
+		}
+	}
+
 	return nil
 }
 

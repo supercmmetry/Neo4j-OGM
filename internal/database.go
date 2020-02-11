@@ -113,11 +113,14 @@ func (l *Database) Set(I_ interface{}, I ...interface{}) *Database {
 
 	if reflect.TypeOf(I_).Kind() == reflect.Ptr && reflect.TypeOf(I_).Elem().Kind() == reflect.Struct {
 		l.addQuery(Query{FamilyType: Updation, Params: Marshal(I_), Output: I_})
+	} else if reflect.TypeOf(I_).Kind() == reflect.Struct {
+		l.addQuery(Query{FamilyType: Updation, Params: Marshal(I_), Output: I_})
 	} else if reflect.TypeOf(I_).Kind() == reflect.String {
 		l.addQuery(Query{FamilyType: UpdationStr, Params: SFormat(I_.(string), I)})
 	} else {
 		l.Error = Error(UnrecognizedExpression)
 	}
+
 	l.Error = l.layer.Sync()
 
 	return l

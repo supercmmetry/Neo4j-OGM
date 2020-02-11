@@ -2,6 +2,7 @@ package lucy
 
 import (
 	"fmt"
+	"reflect"
 )
 
 /* The QueryCradle is responsible for storing expressions and operators
@@ -165,8 +166,13 @@ func (q *QueryEngine) Sync() error {
 			cradle.Out = qr.Output
 			break
 		case Updation:
-			if _, ok := q.cradle.deps[Where]; !ok {
-				return Error(UnsatisfiedDependency, "missing: Where()")
+			if q.cradle.Out == nil || (reflect.TypeOf(q.cradle.Out).Kind() == reflect.Ptr &&
+				reflect.TypeOf(q.cradle.Out).Elem().Kind() == reflect.Slice) ||
+				reflect.TypeOf(q.cradle.Out).Kind() == reflect.Slice {
+
+				if _, ok := q.cradle.deps[Where]; !ok {
+					return Error(UnsatisfiedDependency, "missing: Where()")
+				}
 			}
 
 			cradle.Ops.Push(cradle.family)
@@ -178,11 +184,16 @@ func (q *QueryEngine) Sync() error {
 			cradle.Exps.Push(exp)
 			break
 		case UpdationStr:
-			if _, ok := q.cradle.deps[Where]; !ok {
-				return Error(UnsatisfiedDependency, "missing: Where()")
-			}
-			if _, ok := q.cradle.deps[Model]; !ok {
-				return Error(UnsatisfiedDependency, "missing: Model()")
+			if q.cradle.Out == nil || (reflect.TypeOf(q.cradle.Out).Kind() == reflect.Ptr &&
+				reflect.TypeOf(q.cradle.Out).Elem().Kind() == reflect.Slice) ||
+				reflect.TypeOf(q.cradle.Out).Kind() == reflect.Slice {
+
+				if _, ok := q.cradle.deps[Where]; !ok {
+					return Error(UnsatisfiedDependency, "missing: Where()")
+				}
+				if _, ok := q.cradle.deps[Model]; !ok {
+					return Error(UnsatisfiedDependency, "missing: Model()")
+				}
 			}
 
 			param := qr.Params.(string)
