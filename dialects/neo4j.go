@@ -197,15 +197,15 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 			genQuery := ""
 			if queryBody != "" {
 				queryBody = n.prefixNodeName(queryBody, nodeName)
-				genQuery = fmt.Sprintf("MATCH (%s: %s) %s SET %s = {%s}", nodeName, className, queryBody, nodeName,
-					n.prefixNodeName(n.marshalToCypherExp(exp.(e.Exp)), nodeName))
+				genQuery = fmt.Sprintf("MATCH (%s: %s) %s SET %s = {%s} RETURN {result: %s}", nodeName, className, queryBody, nodeName,
+					n.prefixNodeName(n.marshalToCypherExp(exp.(e.Exp)), nodeName), nodeName)
 			} else {
 				// We haven't encountered a where clause yet. So fetch search params from cradle.out
 				marsh := e.Marshal(cradle.Out)
 				e.SanitizeExp(marsh)
 				cypherA := n.marshalToCypherExp(marsh)
-				genQuery = fmt.Sprintf("MATCH (%s: %s {%s}) SET %s = {%s}", nodeName, className, cypherA,
-					nodeName, n.prefixNodeName(n.marshalToCypherExp(exp.(e.Exp)), nodeName))
+				genQuery = fmt.Sprintf("MATCH (%s: %s {%s}) SET %s = {%s} RETURN {result: %s}", nodeName, className, cypherA,
+					nodeName, n.prefixNodeName(n.marshalToCypherExp(exp.(e.Exp)), nodeName), nodeName)
 			}
 
 			return genQuery, nil
@@ -227,8 +227,8 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 			// If queryBody is non-empty this means that we have encountered a where clause.
 			if queryBody != "" {
 				queryBody = n.prefixNodeName(queryBody, nodeName)
-				genQuery = fmt.Sprintf("MATCH (%s: %s) %s SET %s", nodeName, className, queryBody,
-					n.prefixNodeName(exp.(string), nodeName))
+				genQuery = fmt.Sprintf("MATCH (%s: %s) %s SET %s RETURN {result: %s}", nodeName, className, queryBody,
+					n.prefixNodeName(exp.(string), nodeName), nodeName)
 			} else {
 				// We haven't encountered a where clause yet. So fetch search params from cradle.out
 				marsh := e.Marshal(cradle.Out)
@@ -243,8 +243,8 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 					className = reflect.TypeOf(cradle.Out).Name()
 				}
 
-				genQuery = fmt.Sprintf("MATCH (%s: %s {%s}) SET %s", nodeName, className, cypherA,
-					n.prefixNodeName(exp.(string), nodeName))
+				genQuery = fmt.Sprintf("MATCH (%s: %s {%s}) SET %s RETURN {result: %s}", nodeName, className, cypherA,
+					n.prefixNodeName(exp.(string), nodeName), nodeName)
 			}
 
 			return genQuery, nil
