@@ -17,6 +17,7 @@ func main() {
 	fmt.Println("lucy - devel")
 
 	driver, err := neo4j.NewDriver("bolt://localhost:7687", neo4j.BasicAuth("neo4j", "password", ""))
+
 	if err != nil {
 		panic(err)
 	}
@@ -29,8 +30,13 @@ func main() {
 
 	db := lucifer.DB()
 
+	defer db.Close()
+
 	t := time.Now()
-	// err = db.Create(Person{Name: "Vishaal", Age: 20})
+	err = db.Create(Person{Name: "Vishaal", Age: 20}).Error
+
+
+
 
 	err = db.Model(peep).Where("name = ?", "Vishaal").And("age >= ?", 18).
 		Set("age = ?", 18).Error
@@ -40,21 +46,13 @@ func main() {
 	err = db.Where("name = ?", "Vishaal").And("age >= ?", 18).Find(&peep).
 		Set("age = ?", peep.Age + 2).Error
 
+	err = db.Model(peep).Where("name = ?", "Vishaal").Delete().Error
+
+
+
 	if err != nil {
 		panic(err)
 	}
-
-
-
-	//for i := 0; i < 100; i++ {
-	//
-	//	err = db.Where("name = ?", "Vishaal").And("age >= ?", 18).
-	//		Find(&peep).Set(peep).Error
-	//
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//}
 
 	fmt.Println("Collection: ", peeps)
 	fmt.Println("First Record: ", peep)
