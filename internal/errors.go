@@ -7,10 +7,11 @@ const (
 	ExpressionExpected
 	UnrecognizedExpression
 	QueryInjection
+	NoRecordsFound
 )
 
 const (
-	NoSeverity   = iota
+	NoSeverity = iota
 	LowSeverity
 	HighSeverity
 )
@@ -35,6 +36,7 @@ func (e *LucyErrors) Init() *LucyErrors {
 		ExpressionExpected:     "lucy: expression expected in parameter",
 		UnrecognizedExpression: "lucy: expression not recognized",
 		QueryInjection:         "lucy: query injection detected",
+		NoRecordsFound:         "lucy: No records found",
 	}
 	return e
 }

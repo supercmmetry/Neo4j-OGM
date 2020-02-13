@@ -217,7 +217,6 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 
 			exp, err := cradle.Exps.Get()
 
-
 			if err != nil {
 				return "", err
 			}
@@ -248,14 +247,42 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 			}
 
 			return genQuery, nil
+		case e.Deletion:
+			genQuery := ""
+			if nodeName == "" {
+				nodeName = "n"
+			}
+			if queryBody != "" {
+				genQuery = fmt.Sprintf("MATCH (%s: %s) %s DETACH DELETE %s", nodeName, className, queryBody,
+					nodeName)
+				genQuery = n.prefixNodeName(genQuery, nodeName)
+			} else {
+				// We haven't encountered a where clause yet. So fetch search params from cradle.out
+				marsh := e.Marshal(cradle.Out)
+				e.SanitizeExp(marsh)
+				cypherA := n.marshalToCypherExp(marsh)
+
+				if reflect.TypeOf(cradle.Out).Kind() == reflect.Ptr &&
+					reflect.TypeOf(cradle.Out).Elem().Kind() == reflect.Struct {
+
+					className = reflect.TypeOf(cradle.Out).Elem().Name()
+				} else if reflect.TypeOf(cradle.Out).Kind() == reflect.Struct {
+					className = reflect.TypeOf(cradle.Out).Name()
+				}
+
+				genQuery = fmt.Sprintf("MATCH (%s: %s {%s}) DETACH DELETE %s", nodeName, className, cypherA, nodeName)
+			}
+
+			return genQuery, nil
 		}
 	}
 
 	return "", nil
 }
 
-func (n *Neo4jRuntime) Execute(query string, target interface{}) error {
+func (n *Neo4jRuntime) Execute(query string, cradle *e.QueryCradle, target interface{}) error {
 	result, err := n.session.Run(query, map[string]interface{}{})
+
 	if err != nil {
 		return err
 	}
@@ -272,6 +299,12 @@ func (n *Neo4jRuntime) Execute(query string, target interface{}) error {
 		records := make([]map[string]interface{}, 0)
 		for result.Next() {
 			records = append(records, result.Record().GetByIndex(0).(map[string]interface{}))
+		}
+
+		if len(records) == 0 {
+			if !cradle.AllowEmptyResult {
+				return e.Error(e.NoRecordsFound)
+			}
 		}
 
 		reflectSlice := reflect.MakeSlice(targetType.Elem(), len(records), len(records))
@@ -291,14 +324,24 @@ func (n *Neo4jRuntime) Execute(query string, target interface{}) error {
 			record := result.Record().GetByIndex(0).(map[string]interface{})
 			node := record["result"].(neo4j.Node)
 			e.Unmarshal(node.Props(), target)
+		} else {
+			if !cradle.AllowEmptyResult {
+				return e.Error(e.NoRecordsFound)
+			}
 		}
 	}
 
 	return nil
 }
 
+func (n *Neo4jRuntime) Close() error {
+	err := n.session.Close()
+	return err
+}
+
 func NewNeo4jRuntime(driver neo4j.Driver) e.QueryRuntime {
 	runtime := &Neo4jRuntime{}
+	runtime.driver = driver
 	if session, err := driver.Session(neo4j.AccessModeWrite); err != nil {
 		panic(err)
 	} else {

@@ -7,6 +7,7 @@ type Layer interface {
 	StartTransaction()
 	Sync() error
 	AddRuntime(rt QueryRuntime)
+	GetRuntime() QueryRuntime
 	ToggleInjectionCheck()
 }
 
@@ -142,7 +143,23 @@ func (l *Database) Model(i interface{}) *Database {
 	return l
 }
 
+func (l *Database) Delete() *Database {
+	if l.Error != nil {
+		return l
+	}
+
+	l.addQuery(Query{FamilyType: Deletion})
+	l.Error = l.layer.Sync()
+
+	return l
+}
+
 func (l *Database) Begin() *Database {
 	l.layer.StartTransaction()
+	return l
+}
+
+func (l *Database) Close() *Database {
+	l.Error = l.layer.GetRuntime().Close()
 	return l
 }
