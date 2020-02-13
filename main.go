@@ -33,7 +33,7 @@ func main() {
 	defer db.Close()
 
 	t := time.Now()
-	err = db.Create(Person{Name: "Vishaal", Age: 20}).Error
+	// err = db.Create(Person{Name: "Vishaal", Age: 20}).Error
 
 
 
@@ -41,13 +41,13 @@ func main() {
 	err = db.Model(peep).Where("name = ?", "Vishaal").And("age >= ?", 18).
 		Set("age = ?", 18).Error
 
-	err = db.Where("name = ?", "Vishaal").And("age >= ?", 18).Find(&peep).Error
-	err = db.Where("name = ?", "Vishaal").And("age >= ?", 18).Find(&peeps).Error
-	err = db.Where("name = ?", "Vishaal").And("age >= ?", 18).Find(&peep).
-		Set("age = ?", peep.Age + 2).Error
-
-	err = db.Model(peep).Where("name = ?", "Vishaal").Delete().Error
-
+	//err = db.Where("name = ?", "Vishaal").And("age >= ?", 18).Find(&peep).Error
+	//err = db.Where("name = ?", "Vishaal").And("age >= ?", 18).Find(&peeps).Error
+	//err = db.Where("name = ?", "Vishaal").And("age >= ?", 18).Find(&peep).
+	//	Set("age = ?", peep.Age + 2).Error
+	//
+	//err = db.Model(peep).Where("name = ?", "Vishaal").Delete().Error
+	//
 
 
 	if err != nil {

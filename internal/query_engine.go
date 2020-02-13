@@ -182,6 +182,8 @@ func (q *QueryEngine) Sync() error {
 			cradle.Out = qr.Output
 			break
 		case Updation:
+			cradle.AllowEmptyResult = false
+
 			if q.cradle.Out == nil || (reflect.TypeOf(q.cradle.Out).Kind() == reflect.Ptr &&
 				reflect.TypeOf(q.cradle.Out).Elem().Kind() == reflect.Slice) ||
 				reflect.TypeOf(q.cradle.Out).Kind() == reflect.Slice {
@@ -200,6 +202,8 @@ func (q *QueryEngine) Sync() error {
 			cradle.Exps.Push(exp)
 			break
 		case UpdationStr:
+			cradle.AllowEmptyResult = false
+
 			if q.cradle.Out == nil || (reflect.TypeOf(q.cradle.Out).Kind() == reflect.Ptr &&
 				reflect.TypeOf(q.cradle.Out).Elem().Kind() == reflect.Slice) ||
 				reflect.TypeOf(q.cradle.Out).Kind() == reflect.Slice {

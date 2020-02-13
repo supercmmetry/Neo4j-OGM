@@ -288,6 +288,9 @@ func (n *Neo4jRuntime) Execute(query string, cradle *e.QueryCradle, target inter
 	}
 
 	if target == nil {
+		if !cradle.AllowEmptyResult && !result.Next() {
+			return e.Error(e.NoRecordsFound)
+		}
 		return nil
 	}
 
