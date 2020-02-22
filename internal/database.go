@@ -1,10 +1,11 @@
 package lucy
 
-import "reflect"
+import (
+	"reflect"
+)
 
 type Layer interface {
 	AttachTo(l *Database)
-	StartTransaction()
 	Sync() error
 	AddRuntime(rt QueryRuntime)
 	GetRuntime() QueryRuntime
@@ -12,10 +13,13 @@ type Layer interface {
 }
 
 type Database struct {
-	Queue Queue
-	Error error
-	layer Layer
+	Queue         Queue
+	Error         error
+	layer         Layer
+	isTransaction bool
 }
+
+
 
 func (l *Database) addQuery(query Query) {
 	l.Queue.Push(query)
@@ -178,12 +182,56 @@ func (l *Database) Relation(relName string) *Database {
 		return l
 	}
 
-	l.addQuery(Query{FamilyType:MTRelation, Params: Exp{"relation": relName}})
+	l.addQuery(Query{FamilyType: MTRelation, Params: Exp{"relation": relName}})
 
 	return l
 }
 
 func (l *Database) Close() *Database {
-	l.Error = l.layer.GetRuntime().Close()
+	if l.Error != nil {
+		return l
+	}
+
+	if l.isTransaction {
+		l.Error = l.layer.GetRuntime().CloseTransaction()
+		if l.Error == nil {
+			l.isTransaction = false
+		}
+	} else {
+		l.Error = l.layer.GetRuntime().Close()
+	}
 	return l
+}
+
+func (l *Database) Commit() *Database {
+	if l.Error != nil {
+		return l
+	}
+
+	l.Error = l.layer.GetRuntime().Commit()
+	return l
+}
+
+func (l *Database) Rollback() *Database {
+	if l.Error != nil {
+		return l
+	}
+
+	l.Error = l.layer.GetRuntime().Rollback()
+	return l
+}
+
+func (l *Database) Begin() *Database {
+	if l.Error != nil {
+		return l
+	}
+
+	engine := (&QueryEngine{}).NewQueryEngine()
+	db := &Database{}
+	engine.AttachTo(db)
+	db.AddRuntime(l.layer.GetRuntime().Clone())
+	db.isTransaction = true
+	l.Error = db.layer.GetRuntime().BeginTransaction()
+
+	return db
 }
