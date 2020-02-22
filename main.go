@@ -5,7 +5,6 @@ import (
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 	lucy "github.com/supercmmetry/lucy/core"
 	dialects "github.com/supercmmetry/lucy/dialects"
-	"time"
 )
 
 type DscDeveloper struct {
@@ -30,15 +29,22 @@ func main() {
 
 	defer db.Close()
 
-	t := time.Now()
 
+	tx := db.Begin()
 	// Delete nodes
-	err = db.Model(DscDeveloper{}).Where("age > 0").Delete().Error
+	err = tx.Model(DscDeveloper{}).Where("age > 0").Delete().Error
+
+
 
 	// Create nodes in DB
-	err = db.Create(DscDeveloper{Name: "Vishaal Selvaraj", Age: 19, Position: "Core Member"}).Error
-	err = db.Create(DscDeveloper{Name: "Amogh Lele", Age: 20, Position: "Core Member"}).Error
-	err = db.Create(DscDeveloper{Name: "Angad Sharma", Age: 21, Position: "Community Lead"}).Error
+	err = tx.Create(DscDeveloper{Name: "Vishaal Selvaraj", Age: 19, Position: "Core Member"}).Error
+	err = tx.Create(DscDeveloper{Name: "Amogh Lele", Age: 20, Position: "Core Member"}).Error
+	err = tx.Create(DscDeveloper{Name: "Angad Sharma", Age: 21, Position: "Community Lead"}).Error
+
+	if err != nil {
+		fmt.Println(err)
+		tx.Rollback()
+	}
 
 	// Declare structs
 	vishaal := &DscDeveloper{}
@@ -46,39 +52,65 @@ func main() {
 	angad := &DscDeveloper{}
 
 	// Load data into structs
-	err = db.Where("name = ? and age >= ?", "Vishaal Selvaraj", 18).Find(vishaal).Error
-	err = db.Where("name = ? and age is not null", "Amogh Lele").Find(amogh).Error
-	err = db.Where("position = ?", "Community Lead").Find(angad).Error
+	err = tx.Where("name = ? and age >= ?", "Vishaal Selvaraj", 18).Find(vishaal).Error
+	err = tx.Where("name = ? and age is not null", "Amogh Lele").Find(amogh).Error
+	err = tx.Where("position = ?", "Community Lead").Find(angad).Error
 
 	// Update values
-	err = db.Find(angad).Set("age = ?", 20).Error
+	err = tx.Find(angad).Set("age = ?", 20).Error
+
+	if err != nil {
+		fmt.Println(err)
+		tx.Rollback()
+	}
 
 	// Relate nodes
-	err = db.Relate(angad).To(amogh).By("HELPS").Error
-	err = db.Relate(amogh).To(angad).By("HELPS").Error
+	err = tx.Relate(angad).To(amogh).By("HELPS").Error
+	err = tx.Relate(amogh).To(angad).By("HELPS").Error
 
-	err = db.Relate(vishaal).To(amogh).By("LEARNS_FROM").Error
-	err = db.Relate(vishaal).To(angad).By("LEARNS_FROM").Error
+	err = tx.Relate(vishaal).To(amogh).By("LEARNS_FROM").Error
+	err = tx.Relate(vishaal).To(angad).By("LEARNS_FROM").Error
 
-	err = db.Relate(amogh).To(vishaal).By("HELPS").Error
-	err = db.Relate(angad).To(vishaal).By("HELPS").Error
+	err = tx.Relate(amogh).To(vishaal).By("HELPS").Error
+	err = tx.Relate(angad).To(vishaal).By("HELPS").Error
+
+	if err != nil {
+		fmt.Println(err)
+		tx.Rollback()
+	}
+
 
 	// Get node collection
 	coreMembers := &[]DscDeveloper{}
 
-	err = db.Where("position = ?", "Core Member").Find(coreMembers).Error
+	err = tx.Where("position = ?", "Core Member").Find(coreMembers).Error
+
+	if err != nil {
+		fmt.Println(err)
+		tx.Rollback()
+	}
+
+
 	fmt.Println("Some core members at DSC: ", coreMembers)
 
 	// Get nodes using relation
-	someOfMyTeachers := &[]DscDeveloper{}
+	relPeeps := &[]DscDeveloper{}
 
-	err = db.Find(vishaal).Relation("LEARNS_FROM").Find(someOfMyTeachers).Error
-	fmt.Println("Some teachers at DSC: ", someOfMyTeachers)
+	err = tx.Find(vishaal).Relation("LEARNS_FROM").Find(relPeeps).Error
 
+
+	if err != nil {
+		fmt.Println(err)
+		tx.Rollback()
+	}
+
+	fmt.Println("DscDevelopers in LEARNS_FROM.Y: ", relPeeps)
+
+	tx.Commit()
+
+	err = db.Error
 	if err != nil {
 		panic(err)
 	}
-
-	fmt.Println(time.Now().Sub(t))
 
 }
