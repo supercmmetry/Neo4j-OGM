@@ -12,8 +12,10 @@ import (
 )
 
 type Neo4jRuntime struct {
-	driver  neo4j.Driver
-	session neo4j.Session
+	driver        neo4j.Driver
+	session       neo4j.Session
+	transaction   neo4j.Transaction
+	isTransaction bool
 }
 
 var (
@@ -290,7 +292,6 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 				kvp["classNameX"] = reflect.TypeOf(exp).Name()
 			}
 
-
 			lucyExp := e.Marshal(exp)
 			e.SanitizeExp(lucyExp)
 
@@ -336,15 +337,12 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 
 			pExp := exp.(e.Exp)
 
-
 			kvp["classNameX"] = e.GetTypeName(pExp["out"])
 
 			outExp := e.Marshal(pExp["out"])
 			e.SanitizeExp(outExp)
 			kvp["cypherA"] = n.marshalToCypherExp(outExp)
 			kvp["relName"] = pExp["relation"].(string)
-
-			fmt.Println(kvp["classNameX"])
 			break
 		}
 	}
@@ -353,7 +351,13 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 }
 
 func (n *Neo4jRuntime) Execute(query string, cradle *e.QueryCradle, target interface{}) error {
-	result, err := n.session.Run(query, map[string]interface{}{})
+	var result neo4j.Result
+	var err error
+	if n.isTransaction {
+		result, err = n.transaction.Run(query, map[string]interface{}{})
+	} else {
+		result, err = n.session.Run(query, map[string]interface{}{})
+	}
 
 	if err != nil {
 		return err
@@ -412,6 +416,54 @@ func (n *Neo4jRuntime) Execute(query string, cradle *e.QueryCradle, target inter
 func (n *Neo4jRuntime) Close() error {
 	err := n.session.Close()
 	return err
+}
+
+func (n *Neo4jRuntime) Commit() error {
+	if n.isTransaction {
+		return n.transaction.Commit()
+	} else {
+		return e.Error(e.InvalidOperation, "cannot commit without transaction")
+	}
+}
+
+func (n *Neo4jRuntime) Rollback() error {
+	if n.isTransaction {
+		return n.transaction.Rollback()
+	} else {
+		return e.Error(e.InvalidOperation, "cannot rollback without transaction")
+	}
+}
+
+func (n *Neo4jRuntime) BeginTransaction() error {
+	t, err := n.session.BeginTransaction()
+	if err != nil {
+		return err
+	}
+
+	n.transaction = t
+	n.isTransaction = true
+	return nil
+}
+
+func (n *Neo4jRuntime) CloseTransaction() error {
+	if n.isTransaction {
+		err := n.transaction.Close()
+		if err != nil {
+			return err
+		}
+	}
+
+	n.isTransaction = false
+	n.transaction = nil
+	return nil
+}
+
+func (n *Neo4jRuntime) Clone() e.QueryRuntime {
+	return &Neo4jRuntime{
+		session:       n.session,
+		driver:        n.driver,
+		isTransaction: false,
+	}
 }
 
 func NewNeo4jRuntime(driver neo4j.Driver) e.QueryRuntime {
