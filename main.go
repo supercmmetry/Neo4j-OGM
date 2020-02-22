@@ -107,6 +107,7 @@ func main() {
 	fmt.Println("DscDevelopers in LEARNS_FROM.Y: ", relPeeps)
 
 	tx.Commit()
+	tx.Close()
 
 	err = db.Error
 	if err != nil {
