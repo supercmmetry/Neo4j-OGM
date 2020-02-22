@@ -1,7 +1,6 @@
 package lucy
 
 import (
-	"fmt"
 	"reflect"
 )
 
@@ -37,6 +36,11 @@ type QueryRuntime interface {
 	Compile(cradle *QueryCradle) (string, error)
 	Execute(query string, cradle *QueryCradle, target interface{}) error
 	Close() error
+	Commit() error
+	Rollback() error
+	BeginTransaction() error
+	CloseTransaction() error
+	Clone() QueryRuntime
 }
 
 /*
@@ -152,7 +156,6 @@ func (q *QueryEngine) Sync() error {
 
 			cradle.Exps.Push(param)
 			cradle.Ops.Push(cradle.family)
-
 
 			break
 		case SetTarget:
@@ -286,7 +289,7 @@ func (q *QueryEngine) Sync() error {
 		return err
 	}
 
-	fmt.Println("Generated query: ", query)
+	// fmt.Println("Generated query: ", query)
 
 	if err := q.Runtime.Execute(query, q.cradle, q.cradle.Out); err != nil {
 		q.cradle.init()
