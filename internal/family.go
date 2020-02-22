@@ -4,7 +4,8 @@ type FamilyType uint
 
 const (
 	Where FamilyType = iota
-	Relation
+	RelationX
+	RelationY
 	Creation
 	Updation
 	UpdationStr
@@ -13,6 +14,7 @@ const (
 	Unknown
 	And
 	Or
-	MiscNodeName
+	By
 	Model
+	MTRelation
 )

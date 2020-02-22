@@ -8,9 +8,10 @@ import (
 	"time"
 )
 
-type Person struct {
-	Name string `lucy:"name"`
-	Age  int    `lucy:"age"`
+type DscDeveloper struct {
+	Name     string `lucy:"name"`
+	Age      int    `lucy:"age"`
+	Position string `lucy:"position"`
 }
 
 func main() {
@@ -25,39 +26,58 @@ func main() {
 	lucifer := lucy.Lucy{}
 	lucifer.AddRuntime(dialects.NewNeo4jRuntime(driver))
 
-	peep := Person{}
-	peeps := make([]Person, 0)
-
 	db := lucifer.DB()
 
 	defer db.Close()
 
 	t := time.Now()
-	// err = db.Create(Person{Name: "Vishaal", Age: 20}).Error
 
+	// Delete nodes
+	err = db.Model(DscDeveloper{}).Where("age > 0").Delete().Error
 
+	// Create nodes in DB
+	err = db.Create(DscDeveloper{Name: "Vishaal Selvaraj", Age: 19, Position: "Core Member"}).Error
+	err = db.Create(DscDeveloper{Name: "Amogh Lele", Age: 20, Position: "Core Member"}).Error
+	err = db.Create(DscDeveloper{Name: "Angad Sharma", Age: 21, Position: "Community Lead"}).Error
 
+	// Declare structs
+	vishaal := &DscDeveloper{}
+	amogh := &DscDeveloper{}
+	angad := &DscDeveloper{}
 
-	err = db.Model(peep).Where("name = ?", "Vishaal").And("age >= ?", 18).
-		Set("age = ?", 18).Error
+	// Load data into structs
+	err = db.Where("name = ? and age >= ?", "Vishaal Selvaraj", 18).Find(vishaal).Error
+	err = db.Where("name = ? and age is not null", "Amogh Lele").Find(amogh).Error
+	err = db.Where("position = ?", "Community Lead").Find(angad).Error
 
-	//err = db.Where("name = ?", "Vishaal").And("age >= ?", 18).Find(&peep).Error
-	//err = db.Where("name = ?", "Vishaal").And("age >= ?", 18).Find(&peeps).Error
-	//err = db.Where("name = ?", "Vishaal").And("age >= ?", 18).Find(&peep).
-	//	Set("age = ?", peep.Age + 2).Error
-	//
-	//err = db.Model(peep).Where("name = ?", "Vishaal").Delete().Error
-	//
+	// Update values
+	err = db.Find(angad).Set("age = ?", 20).Error
 
+	// Relate nodes
+	err = db.Relate(angad).To(amogh).By("HELPS").Error
+	err = db.Relate(amogh).To(angad).By("HELPS").Error
+
+	err = db.Relate(vishaal).To(amogh).By("LEARNS_FROM").Error
+	err = db.Relate(vishaal).To(angad).By("LEARNS_FROM").Error
+
+	err = db.Relate(amogh).To(vishaal).By("HELPS").Error
+	err = db.Relate(angad).To(vishaal).By("HELPS").Error
+
+	// Get node collection
+	coreMembers := &[]DscDeveloper{}
+
+	err = db.Where("position = ?", "Core Member").Find(coreMembers).Error
+	fmt.Println("Some core members at DSC: ", coreMembers)
+
+	// Get nodes using relation
+	someOfMyTeachers := &[]DscDeveloper{}
+
+	err = db.Find(vishaal).Relation("LEARNS_FROM").Find(someOfMyTeachers).Error
+	fmt.Println("Some teachers at DSC: ", someOfMyTeachers)
 
 	if err != nil {
 		panic(err)
 	}
-
-	fmt.Println("Collection: ", peeps)
-	fmt.Println("First Record: ", peep)
-
-
 
 	fmt.Println(time.Now().Sub(t))
 

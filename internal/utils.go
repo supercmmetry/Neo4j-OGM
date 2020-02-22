@@ -168,10 +168,24 @@ func Format(format string, I ...interface{}) string {
 	return SFormat(format, I)
 }
 
-func SanitizeExp(exp Exp){
+func SanitizeExp(exp Exp) {
 	for k, v := range exp {
 		exp[k] = Format("?", v)
 	}
+}
+
+func GetTypeName(i interface{}) string {
+	if reflect.TypeOf(i).Kind() == reflect.Ptr {
+		if reflect.TypeOf(i).Elem().Kind() == reflect.Struct {
+			return reflect.TypeOf(i).Elem().Name()
+		} else if reflect.TypeOf(i).Elem().Kind() == reflect.Slice &&
+			reflect.TypeOf(i).Elem().Elem().Kind() == reflect.Struct {
+			return reflect.TypeOf(i).Elem().Elem().Name()
+		}
+	} else if reflect.TypeOf(i).Kind() == reflect.Struct {
+		return reflect.TypeOf(i).Name()
+	}
+	return ""
 }
 
 type Queue struct {
