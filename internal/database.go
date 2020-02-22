@@ -97,16 +97,6 @@ func (l *Database) Or(I_ interface{}, I ...interface{}) *Database {
 	return l
 }
 
-func (l *Database) By(name string) *Database {
-	if l.Error != nil {
-		return l
-	}
-
-	l.addQuery(Query{FamilyType: MiscNodeName, Params: name})
-
-	return l
-}
-
 func (l *Database) Set(I_ interface{}, I ...interface{}) *Database {
 	if l.Error != nil {
 		return l
@@ -154,8 +144,42 @@ func (l *Database) Delete() *Database {
 	return l
 }
 
-func (l *Database) Begin() *Database {
-	l.layer.StartTransaction()
+func (l *Database) Relate(I interface{}) *Database {
+	if l.Error != nil {
+		return l
+	}
+
+	l.addQuery(Query{FamilyType: RelationX, Params: I})
+	return l
+}
+
+func (l *Database) To(I interface{}) *Database {
+	if l.Error != nil {
+		return l
+	}
+
+	l.addQuery(Query{FamilyType: RelationY, Params: I})
+	return l
+}
+
+func (l *Database) By(relName string) *Database {
+	if l.Error != nil {
+		return l
+	}
+
+	l.addQuery(Query{FamilyType: By, Params: relName})
+	l.Error = l.layer.Sync()
+
+	return l
+}
+
+func (l *Database) Relation(relName string) *Database {
+	if l.Error != nil {
+		return l
+	}
+
+	l.addQuery(Query{FamilyType:MTRelation, Params: Exp{"relation": relName}})
+
 	return l
 }
 
