@@ -1,6 +1,7 @@
 package lucy
 
 import (
+	"github.com/supercmmetry/lucy/types"
 	"reflect"
 )
 
@@ -18,8 +19,6 @@ type Database struct {
 	layer         Layer
 	isTransaction bool
 }
-
-
 
 func (l *Database) addQuery(query Query) {
 	l.Queue.Push(query)
@@ -166,32 +165,28 @@ func (l *Database) To(I interface{}) *Database {
 	return l
 }
 
-func (l *Database) By(relName string) *Database {
+func (l *Database) By(relName string, I ... interface{}) *Database {
 	if l.Error != nil {
 		return l
 	}
 
-	l.addQuery(Query{FamilyType: By, Params: relName})
+	l.addQuery(Query{FamilyType: By, Params: types.Exp{"relation": relName, "params": I}})
 	l.Error = l.layer.Sync()
 
 	return l
 }
 
-func (l *Database) Relation(relName string) *Database {
+func (l *Database) Relation(relName string, I ...interface{}) *Database {
 	if l.Error != nil {
 		return l
 	}
 
-	l.addQuery(Query{FamilyType: MTRelation, Params: Exp{"relation": relName}})
+	l.addQuery(Query{FamilyType: MTRelation, Params: types.Exp{"relation": relName, "params": I}})
 
 	return l
 }
 
 func (l *Database) Close() *Database {
-	if l.Error != nil {
-		return l
-	}
-
 	if l.isTransaction {
 		l.Error = l.layer.GetRuntime().CloseTransaction()
 		if l.Error == nil {
@@ -209,6 +204,13 @@ func (l *Database) Commit() *Database {
 	}
 
 	l.Error = l.layer.GetRuntime().Commit()
+	if l.isTransaction {
+		l.Error = l.layer.GetRuntime().CloseTransaction()
+		if l.Error == nil {
+			l.isTransaction = false
+		}
+	}
+
 	return l
 }
 
@@ -218,6 +220,12 @@ func (l *Database) Rollback() *Database {
 	}
 
 	l.Error = l.layer.GetRuntime().Rollback()
+	if l.isTransaction {
+		l.Error = l.layer.GetRuntime().CloseTransaction()
+		if l.Error == nil {
+			l.isTransaction = false
+		}
+	}
 	return l
 }
 
