@@ -2,13 +2,13 @@ package lucy
 
 import (
 	"fmt"
+	"github.com/supercmmetry/lucy/types"
 	"reflect"
 	"strconv"
 )
 
-type Exp map[string]interface{}
 
-func Marshal(v interface{}) Exp {
+func Marshal(v interface{}) types.Exp {
 	vtype := reflect.TypeOf(v)
 	vvalue := reflect.ValueOf(v)
 
@@ -168,7 +168,7 @@ func Format(format string, I ...interface{}) string {
 	return SFormat(format, I)
 }
 
-func SanitizeExp(exp Exp) {
+func SanitizeExp(exp types.Exp) {
 	for k, v := range exp {
 		exp[k] = Format("?", v)
 	}

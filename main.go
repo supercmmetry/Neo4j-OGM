@@ -5,6 +5,7 @@ import (
 	"github.com/neo4j/neo4j-go-driver/neo4j"
 	lucy "github.com/supercmmetry/lucy/core"
 	dialects "github.com/supercmmetry/lucy/dialects"
+	lucytype "github.com/supercmmetry/lucy/types"
 )
 
 type DscDeveloper struct {
@@ -23,18 +24,15 @@ func main() {
 	}
 
 	lucifer := lucy.Lucy{}
-	lucifer.AddRuntime(dialects.NewNeo4jRuntime(driver))
+	lucifer.AddRuntime(dialects.NewNeo4jRuntime(&driver))
 
 	db := lucifer.DB()
 
 	defer db.Close()
 
-
 	tx := db.Begin()
 	// Delete nodes
 	err = tx.Model(DscDeveloper{}).Where("age > 0").Delete().Error
-
-
 
 	// Create nodes in DB
 	err = tx.Create(DscDeveloper{Name: "Vishaal Selvaraj", Age: 19, Position: "Core Member"}).Error
@@ -65,10 +63,9 @@ func main() {
 	}
 
 	// Relate nodes
-	err = tx.Relate(angad).To(amogh).By("HELPS").Error
-	err = tx.Relate(amogh).To(angad).By("HELPS").Error
+	err = tx.Relate(angad).To(amogh).By("HELPS", dialects.Neo4jBidirectional, lucytype.Exp{"IN": "DevOps"}).Error
 
-	err = tx.Relate(vishaal).To(amogh).By("LEARNS_FROM").Error
+	err = tx.Relate(vishaal).To(amogh).By("LEARNS_FROM", dialects.Neo4jUnidirectionalRight, lucytype.Exp{"ABOUT": "Android"}).Error
 	err = tx.Relate(vishaal).To(angad).By("LEARNS_FROM").Error
 
 	err = tx.Relate(amogh).To(vishaal).By("HELPS").Error
@@ -79,6 +76,9 @@ func main() {
 		tx.Rollback()
 	}
 
+	tx.Commit()
+
+	tx = db.Begin()
 
 	// Get node collection
 	coreMembers := &[]DscDeveloper{}
@@ -90,14 +90,12 @@ func main() {
 		tx.Rollback()
 	}
 
-
 	fmt.Println("Some core members at DSC: ", coreMembers)
 
 	// Get nodes using relation
 	relPeeps := &[]DscDeveloper{}
 
-	err = tx.Find(vishaal).Relation("LEARNS_FROM").Find(relPeeps).Error
-
+	err = tx.Find(vishaal).Relation("LEARNS_FROM", dialects.Neo4jUnidirectionalRight, lucytype.Exp{"ABOUT": "Android"}).Find(relPeeps).Error
 
 	if err != nil {
 		fmt.Println(err)

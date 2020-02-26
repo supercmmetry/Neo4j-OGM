@@ -1,6 +1,7 @@
 package lucy
 
 import (
+	"fmt"
 	"github.com/supercmmetry/lucy/types"
 	"reflect"
 )
@@ -290,7 +291,7 @@ func (q *QueryEngine) Sync() error {
 		return err
 	}
 
-	// fmt.Println("Generated query: ", query)
+	fmt.Println("Generated query: ", query)
 
 	if err := q.Runtime.Execute(query, q.cradle, q.cradle.Out); err != nil {
 		q.cradle.init()
