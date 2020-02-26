@@ -72,12 +72,12 @@ func (n *Neo4jRuntime) marshalToCypherBody(exp t.Exp) string {
 func (n *Neo4jRuntime) parseRelationToCypher(relName string, relType RelationType, data t.Exp) string {
 	switch relType {
 	case Neo4jUnidirectionalLeft:
-		return fmt.Sprintf("CREATE (n)<-[:%s {%s}]-(m)", relName, n.marshalToCypherExp(data))
+		return fmt.Sprintf("(n)<-[:%s {%s}]-(m)", relName, n.marshalToCypherExp(data))
 	case Neo4jUnidirectionalRight:
-		return fmt.Sprintf("CREATE (n)-[:%s {%s}]->(m)", relName, n.marshalToCypherExp(data))
+		return fmt.Sprintf("(n)-[:%s {%s}]->(m)", relName, n.marshalToCypherExp(data))
 	case Neo4jBidirectional:
 		expStr := n.marshalToCypherExp(data)
-		return fmt.Sprintf("CREATE (n)-[:%s {%s}]->(m), (n)<-[:%s {%s}]-(m)", relName, expStr, relName, expStr)
+		return fmt.Sprintf("(n)-[:%s {%s}]->(m), (n)<-[:%s {%s}]-(m)", relName, expStr, relName, expStr)
 	default:
 		return ""
 	}
@@ -137,8 +137,8 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 				genQuery = n.prefixNodeName(genQuery, kvp["nodeName"])
 				return genQuery, nil
 			} else if kvp["Context.Find"] == "Relation" {
-				genQuery := fmt.Sprintf("MATCH (n: %s {%s})-[:%s]->(m: %s) RETURN {result: m}", kvp["classNameX"],
-					kvp["cypherA"], kvp["relName"], kvp["className"])
+				genQuery := fmt.Sprintf("MATCH (n: %s {%s}), %s, (m: %s) RETURN {result: m}", kvp["classNameX"],
+					kvp["cypherA"], kvp["relExp"], kvp["className"])
 				return genQuery, nil
 			}
 
@@ -361,7 +361,7 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 				if !ok {
 					return "", e.Error(e.UnrecognizedExpression)
 				}
-				genQuery = fmt.Sprintf("MATCH (n: %s {%s}), (m: %s {%s}) %s", kvp["classNameX"],
+				genQuery = fmt.Sprintf("MATCH (n: %s {%s}), (m: %s {%s}) CREATE %s", kvp["classNameX"],
 					kvp["matchExpX"], kvp["classNameY"], kvp["matchExpY"], n.parseRelationToCypher(relName, relType, t.Exp{}))
 			} else if len(I) == 2 {
 				// RelationType and Data passed in parameters.
@@ -371,12 +371,14 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 				}
 
 				exp, ok := I[1].(t.Exp)
+
+
 				if !ok {
 					return "", e.Error(e.UnrecognizedExpression)
 				}
 				e.SanitizeExp(exp)
 
-				genQuery = fmt.Sprintf("MATCH (n: %s {%s}), (m: %s {%s}) %s", kvp["classNameX"],
+				genQuery = fmt.Sprintf("MATCH (n: %s {%s}), (m: %s {%s}) CREATE %s", kvp["classNameX"],
 					kvp["matchExpX"], kvp["classNameY"], kvp["matchExpY"], n.parseRelationToCypher(relName, relType, exp))
 			}
 
@@ -397,6 +399,29 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 			e.SanitizeExp(outExp)
 			kvp["cypherA"] = n.marshalToCypherExp(outExp)
 			kvp["relName"] = pExp["relation"].(string)
+			I := pExp["params"].([]interface{})
+			if len(I) == 0 {
+				kvp["relExp"] = n.parseRelationToCypher(kvp["relName"], Neo4jUnidirectionalRight, t.Exp{})
+			} else if len(I) == 1 {
+				relType, ok := I[0].(RelationType)
+				if !ok {
+					return "", e.Error(e.UnrecognizedExpression)
+				}
+				kvp["relExp"] = n.parseRelationToCypher(kvp["relName"], relType, t.Exp{})
+			} else if len(I) == 2 {
+				relType, ok := I[0].(RelationType)
+				if !ok {
+					return "", e.Error(e.UnrecognizedExpression)
+				}
+
+				expr, ok := I[1].(t.Exp)
+				if !ok {
+					return "", e.Error(e.UnrecognizedExpression)
+				}
+				e.SanitizeExp(expr)
+
+				kvp["relExp"] = n.parseRelationToCypher(kvp["relName"], relType, expr)
+			}
 			break
 		}
 	}
