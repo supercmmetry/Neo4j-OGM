@@ -6,16 +6,23 @@ import (
 	"reflect"
 
 	e "github.com/supercmmetry/lucy/internal"
-
+	t "github.com/supercmmetry/lucy/types"
 	"regexp"
 	"strings"
 )
 
+type RelationType uint
+
+const (
+	Neo4jUnidirectionalLeft RelationType = iota
+	Neo4jUnidirectionalRight
+	Neo4jBidirectional
+)
+
 type Neo4jRuntime struct {
-	driver        neo4j.Driver
-	session       neo4j.Session
-	transaction   neo4j.Transaction
-	isTransaction bool
+	driver      *neo4j.Driver
+	session     *neo4j.Session
+	transaction *neo4j.Transaction
 }
 
 var (
@@ -41,7 +48,10 @@ func (n *Neo4jRuntime) prefixNodeName(query string, nodeName string) string {
 	return query
 }
 
-func (n *Neo4jRuntime) marshalToCypherExp(exp e.Exp) string {
+func (n *Neo4jRuntime) marshalToCypherExp(exp t.Exp) string {
+	if len(exp) == 0 {
+		return ""
+	}
 	baseStr := ""
 
 	for k, v := range exp {
@@ -50,13 +60,27 @@ func (n *Neo4jRuntime) marshalToCypherExp(exp e.Exp) string {
 	return baseStr[:len(baseStr)-1]
 }
 
-func (n *Neo4jRuntime) marshalToCypherBody(exp e.Exp) string {
+func (n *Neo4jRuntime) marshalToCypherBody(exp t.Exp) string {
 	baseStr := ""
 
 	for k, v := range exp {
 		baseStr += fmt.Sprintf("%s = %s , ", k, v)
 	}
 	return baseStr[:len(baseStr)-4]
+}
+
+func (n *Neo4jRuntime) parseRelationToCypher(relName string, relType RelationType, data t.Exp) string {
+	switch relType {
+	case Neo4jUnidirectionalLeft:
+		return fmt.Sprintf("CREATE (n)<-[:%s {%s}]-(m)", relName, n.marshalToCypherExp(data))
+	case Neo4jUnidirectionalRight:
+		return fmt.Sprintf("CREATE (n)-[:%s {%s}]->(m)", relName, n.marshalToCypherExp(data))
+	case Neo4jBidirectional:
+		expStr := n.marshalToCypherExp(data)
+		return fmt.Sprintf("CREATE (n)-[:%s {%s}]->(m), (n)<-[:%s {%s}]-(m)", relName, expStr, relName, expStr)
+	default:
+		return ""
+	}
 }
 
 func (n *Neo4jRuntime) CheckForInjection(expStr string) (uint, bool) {
@@ -138,7 +162,7 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			genQuery := fmt.Sprintf("CREATE (%s:%s {%s})", kvp["nodeName"], kvp["className"], n.marshalToCypherExp(exp.(e.Exp)))
+			genQuery := fmt.Sprintf("CREATE (%s:%s {%s})", kvp["nodeName"], kvp["className"], n.marshalToCypherExp(exp.(t.Exp)))
 			return genQuery, nil
 		case e.Where:
 			queryBody = "WHERE"
@@ -195,7 +219,7 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 				queryBody = n.prefixNodeName(queryBody, kvp["nodeName"])
 				genQuery = fmt.Sprintf("MATCH (%s: %s) %s SET %s = {%s} RETURN {result: %s}", kvp["nodeName"], kvp["className"],
 					queryBody, kvp["nodeName"],
-					n.prefixNodeName(n.marshalToCypherExp(exp.(e.Exp)), kvp["nodeName"]), kvp["nodeName"])
+					n.prefixNodeName(n.marshalToCypherExp(exp.(t.Exp)), kvp["nodeName"]), kvp["nodeName"])
 			} else {
 				// We haven't encountered a where clause yet. So fetch search params from cradle.out
 				marsh := e.Marshal(cradle.Out)
@@ -203,7 +227,7 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 				cypherA := n.marshalToCypherExp(marsh)
 				genQuery = fmt.Sprintf("MATCH (%s: %s {%s}) SET %s = {%s} RETURN {result: %s}", kvp["nodeName"], kvp["className"],
 					cypherA,
-					kvp["nodeName"], n.prefixNodeName(n.marshalToCypherExp(exp.(e.Exp)), kvp["nodeName"]), kvp["nodeName"])
+					kvp["nodeName"], n.prefixNodeName(n.marshalToCypherExp(exp.(t.Exp)), kvp["nodeName"]), kvp["nodeName"])
 			}
 
 			return genQuery, nil
@@ -323,9 +347,39 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 				return "", err
 			}
 
-			relName := exp.(string)
-			genQuery := fmt.Sprintf("MATCH (n: %s {%s}), (m: %s {%s}) CREATE (n)-[:%s]->(m)", kvp["classNameX"],
-				kvp["matchExpX"], kvp["classNameY"], kvp["matchExpY"], relName)
+			genQuery := ""
+			pExp := exp.(t.Exp)
+			relName := pExp["relation"].(string)
+			I := pExp["params"].([]interface{})
+
+			if len(I) == 0 {
+				genQuery = fmt.Sprintf("MATCH (n: %s {%s}), (m: %s {%s}) CREATE (n)-[:%s]->(m)", kvp["classNameX"],
+					kvp["matchExpX"], kvp["classNameY"], kvp["matchExpY"], relName)
+			} else if len(I) == 1 {
+				// RelationType passed in parameter.
+				relType, ok := I[0].(RelationType)
+				if !ok {
+					return "", e.Error(e.UnrecognizedExpression)
+				}
+				genQuery = fmt.Sprintf("MATCH (n: %s {%s}), (m: %s {%s}) %s", kvp["classNameX"],
+					kvp["matchExpX"], kvp["classNameY"], kvp["matchExpY"], n.parseRelationToCypher(relName, relType, t.Exp{}))
+			} else if len(I) == 2 {
+				// RelationType and Data passed in parameters.
+				relType, ok := I[0].(RelationType)
+				if !ok {
+					return "", e.Error(e.UnrecognizedExpression)
+				}
+
+				exp, ok := I[1].(t.Exp)
+				if !ok {
+					return "", e.Error(e.UnrecognizedExpression)
+				}
+				e.SanitizeExp(exp)
+
+				genQuery = fmt.Sprintf("MATCH (n: %s {%s}), (m: %s {%s}) %s", kvp["classNameX"],
+					kvp["matchExpX"], kvp["classNameY"], kvp["matchExpY"], n.parseRelationToCypher(relName, relType, exp))
+			}
+
 			return genQuery, nil
 		case e.MTRelation:
 			kvp["Context.Find"] = "Relation"
@@ -335,7 +389,7 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 				return "", err
 			}
 
-			pExp := exp.(e.Exp)
+			pExp := exp.(t.Exp)
 
 			kvp["classNameX"] = e.GetTypeName(pExp["out"])
 
@@ -353,10 +407,10 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 func (n *Neo4jRuntime) Execute(query string, cradle *e.QueryCradle, target interface{}) error {
 	var result neo4j.Result
 	var err error
-	if n.isTransaction {
-		result, err = n.transaction.Run(query, map[string]interface{}{})
+	if n.transaction != nil {
+		result, err = (*n.transaction).Run(query, map[string]interface{}{})
 	} else {
-		result, err = n.session.Run(query, map[string]interface{}{})
+		result, err = (*n.session).Run(query, map[string]interface{}{})
 	}
 
 	if err != nil {
@@ -414,65 +468,63 @@ func (n *Neo4jRuntime) Execute(query string, cradle *e.QueryCradle, target inter
 }
 
 func (n *Neo4jRuntime) Close() error {
-	err := n.session.Close()
+	err := (*n.session).Close()
 	return err
 }
 
 func (n *Neo4jRuntime) Commit() error {
-	if n.isTransaction {
-		return n.transaction.Commit()
+	if n.transaction != nil {
+		return (*n.transaction).Commit()
 	} else {
 		return e.Error(e.InvalidOperation, "cannot commit without transaction")
 	}
 }
 
 func (n *Neo4jRuntime) Rollback() error {
-	if n.isTransaction {
-		return n.transaction.Rollback()
+	if n.transaction != nil {
+		return (*n.transaction).Rollback()
 	} else {
 		return e.Error(e.InvalidOperation, "cannot rollback without transaction")
 	}
 }
 
 func (n *Neo4jRuntime) BeginTransaction() error {
-	t, err := n.session.BeginTransaction()
+	t, err := (*n.session).BeginTransaction()
 	if err != nil {
 		return err
 	}
 
-	n.transaction = t
-	n.isTransaction = true
+	n.transaction = &t
 	return nil
 }
 
 func (n *Neo4jRuntime) CloseTransaction() error {
-	if n.isTransaction {
-		err := n.transaction.Close()
+	if n.transaction != nil {
+		err := (*n.transaction).Close()
 		if err != nil {
 			return err
 		}
 	}
 
-	n.isTransaction = false
 	n.transaction = nil
 	return nil
 }
 
 func (n *Neo4jRuntime) Clone() e.QueryRuntime {
 	return &Neo4jRuntime{
-		session:       n.session,
-		driver:        n.driver,
-		isTransaction: false,
+		session:     n.session,
+		driver:      n.driver,
+		transaction: nil,
 	}
 }
 
-func NewNeo4jRuntime(driver neo4j.Driver) e.QueryRuntime {
+func NewNeo4jRuntime(driver *neo4j.Driver) e.QueryRuntime {
 	runtime := &Neo4jRuntime{}
 	runtime.driver = driver
-	if session, err := driver.Session(neo4j.AccessModeWrite); err != nil {
+	if session, err := (*driver).Session(neo4j.AccessModeWrite); err != nil {
 		panic(err)
 	} else {
-		runtime.session = session
+		runtime.session = &session
 	}
 	return runtime
 }
