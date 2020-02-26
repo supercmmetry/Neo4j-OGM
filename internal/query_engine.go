@@ -1,6 +1,7 @@
 package lucy
 
 import (
+	"github.com/supercmmetry/lucy/types"
 	"reflect"
 )
 
@@ -169,7 +170,7 @@ func (q *QueryEngine) Sync() error {
 		case Creation:
 			cradle.Ops.Push(cradle.family)
 
-			exp := qr.Params.(Exp)
+			exp := qr.Params.(types.Exp)
 			for k, v := range exp {
 				exp[k] = Format("?", v)
 			}
@@ -190,7 +191,7 @@ func (q *QueryEngine) Sync() error {
 
 			cradle.Ops.Push(cradle.family)
 
-			exp := qr.Params.(Exp)
+			exp := qr.Params.(types.Exp)
 			for k, v := range exp {
 				exp[k] = Format("?", v)
 			}
@@ -272,7 +273,7 @@ func (q *QueryEngine) Sync() error {
 
 			cradle.Ops.Push(cradle.family)
 
-			exp := qr.Params.(Exp)
+			exp := qr.Params.(types.Exp)
 			exp["out"] = cradle.Out
 			cradle.Exps.Push(exp)
 
