@@ -514,12 +514,12 @@ func (n *Neo4jRuntime) Rollback() error {
 }
 
 func (n *Neo4jRuntime) BeginTransaction() error {
-	t, err := (*n.session).BeginTransaction()
+	tx, err := (*n.session).BeginTransaction()
 	if err != nil {
 		return err
 	}
 
-	n.transaction = &t
+	n.transaction = &tx
 	return nil
 }
 
