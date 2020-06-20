@@ -17,7 +17,9 @@ type DscDeveloper struct {
 func main() {
 	fmt.Println("lucy - devel")
 
-	driver, err := neo4j.NewDriver("bolt://localhost:7687", neo4j.BasicAuth("neo4j", "password", ""))
+	driver, err := neo4j.NewDriver("bolt://localhost:7687", neo4j.BasicAuth("neo4j", "password", ""), func(c *neo4j.Config) {
+		c.Encrypted = false
+	})
 
 	if err != nil {
 		panic(err)
@@ -52,7 +54,7 @@ func main() {
 	// Load data into structs
 	err = tx.Where("name = ? and age >= ?", "Vishaal Selvaraj", 18).Find(vishaal).Error
 	err = tx.Where("name = ? and age is not null", "Amogh Lele").Find(amogh).Error
-	err = tx.Where("position = ?", "Community Lead").Find(angad).Error
+	err = tx.Where("position = ? and set age = 22", "Community Lead").Find(angad).Error
 
 	// Update values
 	err = tx.Find(angad).Set("age = ?", 20).Error
@@ -65,7 +67,7 @@ func main() {
 	// Relate nodes
 	err = tx.Relate(angad).To(amogh).By("HELPS", dialects.Neo4jBidirectional, lucytype.Exp{"IN": "DevOps"}).Error
 
-	err = tx.Relate(vishaal).To(amogh).By("LEARNS_FROM", dialects.Neo4jUnidirectionalRight, lucytype.Exp{"ABOUT": "Android"}).Error
+	err = tx.Relate(vishaal).To(amogh).By("LEARNS_FROM", dialects.Neo4jOutward, lucytype.Exp{"ABOUT": "Android"}).Error
 	err = tx.Relate(vishaal).To(angad).By("LEARNS_FROM").Error
 
 	err = tx.Relate(amogh).To(vishaal).By("HELPS").Error
@@ -95,7 +97,7 @@ func main() {
 	// Get nodes using relation
 	relPeeps := &[]DscDeveloper{}
 
-	err = tx.Find(vishaal).Relation("LEARNS_FROM", dialects.Neo4jUnidirectionalRight, lucytype.Exp{"ABOUT": "Android"}).Find(relPeeps).Error
+	err = tx.Find(vishaal).Relation("LEARNS_FROM", dialects.Neo4jOutward, lucytype.Exp{"ABOUT": "Android"}).Find(relPeeps).Error
 
 	if err != nil {
 		fmt.Println(err)

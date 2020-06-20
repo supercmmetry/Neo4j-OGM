@@ -14,8 +14,8 @@ import (
 type RelationType uint
 
 const (
-	Neo4jUnidirectionalLeft RelationType = iota
-	Neo4jUnidirectionalRight
+	Heo4jInward RelationType = iota
+	Neo4jOutward
 	Neo4jBidirectional
 )
 
@@ -71,9 +71,9 @@ func (n *Neo4jRuntime) marshalToCypherBody(exp t.Exp) string {
 
 func (n *Neo4jRuntime) parseRelationToCypher(relName string, relType RelationType, data t.Exp) string {
 	switch relType {
-	case Neo4jUnidirectionalLeft:
+	case Heo4jInward:
 		return fmt.Sprintf("(n)<-[:%s {%s}]-(m)", relName, n.marshalToCypherExp(data))
-	case Neo4jUnidirectionalRight:
+	case Neo4jOutward:
 		return fmt.Sprintf("(n)-[:%s {%s}]->(m)", relName, n.marshalToCypherExp(data))
 	case Neo4jBidirectional:
 		expStr := n.marshalToCypherExp(data)
@@ -401,7 +401,7 @@ func (n *Neo4jRuntime) Compile(cradle *e.QueryCradle) (string, error) {
 			kvp["relName"] = pExp["relation"].(string)
 			I := pExp["params"].([]interface{})
 			if len(I) == 0 {
-				kvp["relExp"] = n.parseRelationToCypher(kvp["relName"], Neo4jUnidirectionalRight, t.Exp{})
+				kvp["relExp"] = n.parseRelationToCypher(kvp["relName"], Neo4jOutward, t.Exp{})
 			} else if len(I) == 1 {
 				relType, ok := I[0].(RelationType)
 				if !ok {
